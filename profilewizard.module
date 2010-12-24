@@ -19,13 +19,21 @@ function profilewizard_help($path, $args) {
  * Implementation of hook_perm()
  */
 function profilewizard_perm() {
-  return array('use profile wizard');
+  return array('use profile wizard', 'administer profile wizard');
 }
 
 /**
  * Implementation of hook_menu()
  */
 function profilewizard_menu() {
+  $items['admin/settings/profilewizard'] = array(
+    'title' => 'Profile Wizard',
+    'description' => 'Configure the profile wizard.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('profilewizard_settings'),
+    'access arguments' => array('administer profile wizard'),
+    'file' => 'profilewizard.admin.inc',
+  );
   $items['profilewizard/step/%'] = array(
     'title' => 'Profile Wizard',
     'page callback' => 'profilewizard_wizard',
