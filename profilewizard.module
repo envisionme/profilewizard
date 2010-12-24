@@ -30,7 +30,7 @@ function profilewizard_menu() {
     'title' => 'Profile Wizard',
     'description' => 'Configure the profile wizard.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('profilewizard_settings'),
+    'page arguments' => array('profilewizard_settings_form'),
     'access arguments' => array('administer profile wizard'),
     'file' => 'profilewizard.admin.inc',
   );
