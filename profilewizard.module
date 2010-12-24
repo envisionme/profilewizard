@@ -1,0 +1,546 @@
+<?php
+// $Id$
+/**
+ * @file
+ * Custom module to handle a profile wizard for simplifying the signup process for users
+ */
+ 
+/**
+ * Implementation of hook_help()
+ */
+function profilewizard_help($path, $args) {
+  if ($path == 'admin/help#profilewizard') {
+    $output = '<p>The profile module is a custom module for handling a simple profile wizard for new users</p>';
+    return $output;
+  }
+}
+
+/**
+ * Implementation of hook_perm()
+ */
+function profilewizard_perm() {
+  return array('use profile wizard');
+}
+
+/**
+ * Implementation of hook_menu()
+ */
+function profilewizard_menu() {
+  $items['profilewizard/step/%'] = array(
+    'title' => 'Profile Wizard',
+    'page callback' => 'profilewizard_wizard',
+    'page arguments' => array(2),
+    'access callback' => '_profilewizard_access',
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Function to calculate access to menu
+ *
+ * @return boolean
+ *  True if valid
+ */
+function _profilewizard_access() {
+  global $user;
+  return $user && $user->uid &&
+  (
+    // The user is not blocked and logged in at least once.
+    ($user->access && $user->status && user_access('use profile wizard'))
+  );
+}
+
+/**
+ * Implementation of hook_block()
+ */
+function profilewizard_block($op='list', $delta=0, $edit=array()) {
+  switch($op) {
+    case 'list':
+      $block[0]['info'] = t('Profile Wizard');
+      return $block;
+    case 'view':
+      $blocks['subject'] = t('Profile Wizard');
+      $blocks['content'] = _profilewizard_block();
+      return $blocks;
+  }
+}
+
+/**
+ * Check if the user needs to use the profile wizard and provides the button to start the process
+ *
+ * @return string
+ *  String with link to wizard
+ */
+function _profilewizard_block() {
+  global $user;
+  if (user_access('use profile wizard')) {
+    return l('Profile Wizard', 'profilewizard/step/1');
+  }
+}
+
+/**
+ * Callback returning the the correct form
+ *
+ * @return
+ *  JSON data
+ */
+function profilewizard_wizard($step) {
+  $output = '';
+  module_load_include('inc', 'node', 'node.pages');
+  $profile = get_user_profile();
+  switch($step) {
+  	case 1:
+    	// $output .= _profilewizard_step1($profile);
+    	$output .= drupal_get_form('profilewizard_applicant_step1_form', $profile);
+  	case 2:
+    	$output .= drupal_get_form('profilewizard_applicant_step2_form', $profile);
+  }
+  return $output;
+  /**//*
+  
+  // Include CTools form wizard code and CTools object cache. 
+  ctools_include('wizard');
+  ctools_include('object-cache');
+ 
+  // Wizard configuration. A complete set of parameters is best viewed in 
+  // documentation. 
+  $form_info = array(
+  // Wizard’s identifier. 
+    'id' => 'profile_wizard',
+    // Path to the pages of the wizard (the current step is a variable 
+    // argument). Should be the same as the path defined in hook_menu(). 
+        'path' => "profilewizard/step/%step",
+    // To show or not to show the progress
+    'show trail' => TRUE,
+    // Manage the visibility of additional navigation buttons. 
+    'show back' => FALSE,
+    'show cancel' => FALSE,
+    'show return' => FALSE,
+    // Button texts
+    'next text' => t('Next'),
+    // Special functions prompted by the wizard 
+    // - when navigating the to the next step 
+    'next callback' =>  'profilewizard_wizard_next',
+    // - at the completion of the final step 
+    'finish callback' => 'profilewizard_wizard_finish',
+    // Array that describes the identifiers and the names of steps 
+    // and their order. 
+    'Order' => array ( 
+    'order' => array(
+      '1' => t('Profile Photo'),
+      '2' => t('Basic Information'),
+      '3' => t('Current Job'),
+      '4' => t('Highest Qualification'),
+      '5' => t('Skills'),
+      '6' => t('Search Info'),
+      '7' => t('Finish'),
+    ),
+ 
+    // Array, where the parameters are set for each form (the form of each step) 
+    // The form_id sets the form identifier, which is 
+    // also the name of the form building function. 
+    // The specified form_id are also used to determine the function name 
+    // for the current step: 
+    // - the function $form_id . '_validate' is used for validation, 
+    // - $form_id . '_submit' is used for submission. 
+    // Here you can define additional parameters, such as 
+    // include files that contain the code for each step (for the full list 
+    // of parameters, see documentation). 
+    'forms' => array(
+      '1' => array(
+        'form id' => 'profilewizard_step1',
+      ),
+      '2' => array(
+        'form id' => 'profilewizard_step2',
+      ),
+      '3' => array(
+        'form id' => 'profilewizard_step3',
+      ),
+      '4' => array(
+        'form id' => 'profilewizard_step4',
+      ),
+      '5' => array(
+        'form id' => 'profilewizard_step5',
+      ),
+      '6' => array(
+        'form id' => 'profilewizard_step6',
+      ),
+      '7' => array(
+        'form id' => 'profilewizard_step7',
+      ),
+    ),
+    )
+  );
+ 
+  // An example of working with cache: this is where the transfer of
+  // information between the steps is carried out. Earl Miles recommends
+  // writing wrapper functions around CTools cache objects - 
+  // mymodule_cache_get() and mymodule_cache_set() functions.
+  // In this example it’s assumed that we store data transferred 
+  // between the steps within the $signup object. 
+  $profile_edit = profilewizard_cache_get();
+  if (!$profile_edit) {
+    // Set step = 1 - we have no data from the cache. 
+    $step = current(array_keys($form_info['order']));
+    $profile_edit = new stdClass();
+    profilewizard_cache_set($profile_edit);
+  }
+  // This way the data from the cache are available within each step within 
+  // $form_state array. 
+  $form_state['profile_edit_object'] = $profile_edit;
+ 
+  // Generate the form output for the current step. 
+  $output = ctools_wizard_multistep_form($form_info, $step, $form_state);
+ 
+  return $output;/**/
+}
+
+/**
+ * Generation of a form. 
+ * The difference from usual form generation functions is that we do not return 
+ * the form array, but change the existing form transferred by a link. 
+ * Note that $form already contains buttons for the current step thanks to
+ * the wizard. 
+ */ /*
+function profilewizard_step1(&$form, &$form_state) {
+  $form['age'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Please enter your age'),
+  );
+}
+ 
+/**
+ * Check the form values - there is nothing special compared to 
+ * standard Forms API.
+ */ /*
+function profilewizard_step1_validate(&$form, &$form_state) {
+  if ($form_state['values']['age'] < 18) {
+    form_set_error('age', t('You are too young!'));
+  }
+}
+ 
+/**
+ * In most cases we do not save data within the steps, and only 
+ * validate and prepare them for wizard’s finish, where they are saved 
+ * inside the function, which we defined as "finish callback" (see 
+ * wizard settings). 
+ */ /*
+function profilewizard_step1_submit(&$from, &$form_state) {
+ 
+  // Transfer the information to the following steps by saving in the object
+  // that goes to cache. 
+  // This object should be saved in cache within the function, 
+  // defined as the "next callback".
+  $form_state['signup_object']->age = $form_state['values']['age'];
+}
+
+/**
+ * Generate step 1 of the wizzard
+ * @param $Profile Object
+ *  Profile to use for check
+ *
+ * @return
+ *  Themed string output of step 1 page
+ */
+/*function _profilewizard_step1($profile) {
+  $output = '';
+  $node = $profile;
+  // global $user;
+  $form_id = $profile->type.'_node_form';
+  $form_state = array();
+  
+  module_load_include('inc', 'node', 'node.pages'); 
+  
+  // Initialize settings:
+  $form = drupal_retrieve_form($form_id, $form_state, $profile);
+  drupal_prepare_form($form_id, $form, $form_state);
+  drupal_process_form($form_id, $form, $form_state);
+
+  //— Indicate proper processor, submit function, validate function etc.
+  $form['#action'] = '/node/'.$profile->nid.'/edit';
+  $form['#validate'] = array('ourmodule_ourvalidationfunc' => array());
+  $form['#submit'] = array('_profile_wizard_submit' => array()); 
+
+  // ourmodule_form_disable_defaults( $form );
+  // dprint($form);
+  // print_r($form['#submit']);
+  // $form['group_about']['#type'] = 'hidden';
+  // $form['group_about']['field_name']['#access'] = FALSE;
+  // $form['group_about']['field_name'][0]['value']['#type'] = 'hidden';
+  /*$form['group_avatar']['field_video_link']['#type'] = 'hidden';
+  $form['group_contact']['#type'] = 'hidden';
+  $form['group_app_career_info']['#type'] = 'hidden';
+  $form['group_app_communities']['#type'] = 'hidden';
+  $form['group_app_im_networks']['#type'] = 'hidden';
+  // $form['group_links']['#type'] = 'hidden';
+  $form['group_app_communities']['#type'] = 'hidden';
+
+  /*$form['attachments']['#collapsed'] = 0;
+  $form['body_filter']['format'] = null;
+  $form['format'] = array('#type' => 'hidden', '#value' => 1);
+  $form['log'] = null;
+  $form['log'] = array('#type' => 'hidden', '#value' => '');
+
+  $form['comment_settings'] = null;
+  $form['comment'] = array('#type' => 'hidden', '#value' => 2); 
+  $form['menu'] = null;
+     
+  $form['body_filter']['body']['#rows'] = "5";
+
+  $authorname = $user->name;
+  $form['author'] = null;
+  $form['name'] = array('#type' => 'hidden', '#value' => $authorname);
+  $form['options'] = null;
+  $form['path'] = null;
+  $form['status'] = array('#type' => 'hidden', '#value' => 1);
+  $form['preview']=null;/**/
+  
+  /*$form['author']['#type'] = 'hidden';
+  $form['options']['#type'] = 'hidden';
+  $form['comment_settings']['#type'] = 'hidden';
+  $form['path']['#type'] = 'hidden';
+  $form['path_redirect']['#type'] = 'hidden';
+  $form['print']['#type'] = 'hidden';
+  $form['path']['#type'] = 'hidden';
+  $form['path']['#type'] = 'hidden';
+  $form['notifications']['#type'] = 'hidden';/**//*
+  
+//— Render the form:
+  $output = drupal_render_form($form_id, $form);
+  // $ouput = drupal_get_form($form_id, $node);
+  return $output;
+}/**/
+
+function profilewizard_applicant_step1_form($context, $profile) {
+  $output = '';
+  $node = $profile;
+  // global $user;
+  $form_id = $profile->type.'_node_form';
+  $form_state = array();
+  
+  module_load_include('inc', 'node', 'node.pages'); 
+  
+  // Initialize settings:
+  $form_old = drupal_retrieve_form($form_id, $form_state, $profile);
+  drupal_prepare_form($form_id, $form_old, $form_state);
+  drupal_process_form($form_id, $form_old, $form_state);
+  // $form['group_avatar'] = array(
+    // '#type' => 'fieldset',
+    // '#title' => 'test',
+  // );
+  $form['group_avatar']['field_profile_image'] = $form_old['group_avatar']['field_profile_image'];
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Next'),
+    '#weight' => 999,
+  );
+  $form_old['#id'];
+  $form_old['#action'];
+  // $form_old['#validate'] = array('ourmodule_ourvalidationfunc' => array());
+  unset($form_old['#submit']);
+  $form_old['submit'] = array('profilewizard_applicant_step1_form_submit'); 
+  $form_old['buttons']['submit']['#submit'] = array('profilewizard_applicant_step1_form_submit'); 
+  
+  // print_r($form);
+  
+  return $form;
+}
+
+function profilewizard_applicant_step1_form_submit($form, &$form_state) {
+  $node = get_user_profile();
+  $form_id = $node->type.'_node_form';
+  $form_state_new = array();
+  module_load_include('inc', 'node', 'node.pages'); 
+  
+  // Initialize settings:
+  $form_old = drupal_retrieve_form($form_id, $form_state_new, $node);
+  drupal_prepare_form($form_id, $form_old, $form_state_new);
+  drupal_process_form($form_id, $form_old, $form_state_new);
+  
+  // $form_state_new['values']['field_profile_image'] = $form_state_new['values']['field_profile_image'];
+  // print_r($form_state_new['values']['field_profile_image']);
+  // print_r($form_state['values']['field_profile_image']);
+  // print '123';
+  node_form_submit_build_node($form_id, $form_state_new);
+  node_form_submit($form_id, $form_state_new);
+}
+
+function profilewizard_applicant_step2_form($context, $profile) {
+  $output = '';
+  $node = $profile;
+  $form_id = $profile->type.'_node_form';
+  $form_state = array();
+  
+  module_load_include('inc', 'node', 'node.pages'); 
+  
+  // Initialize settings:
+  $form_old = drupal_retrieve_form($form_id, $form_state, $profile);
+  drupal_prepare_form($form_id, $form_old, $form_state);
+  drupal_process_form($form_id, $form_old, $form_state);
+  
+  /* $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Next'),
+    '#weight' => 999,
+  ); */
+  $form_old['#id'];
+  $form_old['#action'];
+  // $form_old['#validate'] = array('ourmodule_ourvalidationfunc' => array());
+  unset($form_old['#submit']);
+  unset($form_old['buttons']);
+  // $form_old['submit'] = array('profilewizard_applicant_step2_form_submit'); 
+  // $form_old['buttons']['submit']['#submit'] = array('profilewizard_applicant_step2_form_submit'); 
+  
+  // print_r($form_old['group_about']['field_app_dob']);
+  // $form['group_about']['field_app_dob'] = $form_old['group_about']['field_app_dob'];
+  print_r($form_old);
+  return $form_old; 
+}
+
+function profilewizard_applicant_step2_form_submit($form, &$form_state) {
+  $node = get_user_profile();
+  $form_id = $node->type.'_node_form';
+  $form_state_new = array();
+  module_load_include('inc', 'node', 'node.pages'); 
+  
+  // Initialize settings:
+  $form_old = drupal_retrieve_form($form_id, $form_state_new, $node);
+  drupal_prepare_form($form_id, $form_old, $form_state_new);
+  drupal_process_form($form_id, $form_old, $form_state_new);
+  // $form_state_new['values']['field_app_dob'][0]['value'] = $form_state['clicked_button']['#post']['field_app_dob'][0]['value']['date'];
+  // print_r($form_state_new['values']['field_profile_image']);
+  // print_r($form_state['values']['field_profile_image']);
+  // print '123';
+  // print_r($form_state_new);
+  // $form_state = array_merge($form_state_new['values'], $form_state['values']);
+  node_form_submit_build_node($form_id, $form_state_new);
+  node_form_submit($form_id, $form_state_new);
+  // print_r($form_state);
+  
+}
+
+/**
+ * get UID from url (user, company and node pages)
+ *
+ * @return number
+ *  apropriate UID
+ */
+function get_uid_from_url() {
+  // return uid for normal pages
+  if (arg(0) == 'user' && is_numeric(arg(1)))
+    return arg(1);
+  // return admin page holder uid
+  if (arg(0) == 'user' && (arg(1) == null || arg(1) == 'admin') || arg(0) == 'recruiter' && arg(1) == 'admin' || arg(0) == 'company' && arg(1) == 'admin' || arg(0) == 'usersearch') {
+    global $user;
+    return $user->uid;
+  }
+  // return company uid
+  if (arg(0) == 'company' && is_numeric(arg(1)))
+    return arg(1);
+  // return node author
+  if (arg(0) == 'node' && is_numeric(arg(1))) {
+    $node = node_load(arg(1));
+    if ($node->type == 'page')
+      return false;
+    if ($node->type != 'reference')
+      return $node->uid;
+    else {
+      return $node->field_user[0][uid];
+    }
+  }
+  if (arg(0) == 'node' && arg(1) == 'add') {
+    global $user;
+    return $user->uid;
+  }
+  return false;
+}
+
+/**
+ * get user image from $uid
+ *
+ * @return string
+ *  Themed image output
+ */
+function get_user_image($uid = null, $preset = 'thumb-mini') {
+  global $user;
+  if ($uid == null)
+    $uid = $user->uid;
+
+  $user_tmp = user_load($uid);
+  $image_path = $user_tmp->picture;
+  if(in_array("applicant", $user_tmp->roles)) {
+    if (!$image_path || !file_exists($image_path)) {
+      // $result = db_query('SELECT nid FROM {node} n WHERE type = \'%s\' AND n.uid = %d LIMIT %d', 'uprofile', $user_tmp->uid, 1);
+      // $result = db_fetch_object($result);
+      $user_profile = get_user_profile($uid);
+      if ($user_profile->field_gender[0]['value'] == 'Male')
+        $image_path = 'sites/default/files/default-image-m.jpg';
+      elseif ($user_profile->field_gender[0]['value'] == 'Female')
+        $image_path = 'sites/default/files/default-image-f.jpg';
+      else
+        $image_path = 'sites/default/files/default-image.jpg';
+    }
+  } elseif (in_array("company", $user_tmp->roles)) {
+    $user_profile = get_user_profile($uid);
+    // if (file_exists($user_profile->field_company_logo[0]['filepath']))
+      // $image_path = $user_profile->field_company_logo[0]['filepath'];
+    // else
+      $image_path = 'sites/default/files/default-image.jpg';
+    // if ($preset == 'thumb-mini') 
+      // $preset = 'company-mini';
+  }
+  return theme('imagecache', $preset, $image_path, 'View Profile', 'View Profile');
+}
+
+/**
+ * get user profile from $uid
+ *
+ * @return object
+ *  Node containing user profile
+ */
+function get_user_profile($uid = null) {
+  global $user;
+  if ($uid == null)
+    $uid = $user->uid;
+
+  $user_tmp = user_load($uid);
+  if (in_array('applicant', $user_tmp->roles)) {
+    $result = db_query('SELECT nid FROM {node} n WHERE type = \'%s\' AND n.uid = %d LIMIT %d', 'uprofile', $user_tmp->uid, 1);
+  } elseif (in_array('company', $user_tmp->roles)) {
+    $result = db_query('SELECT nid FROM {node} n WHERE type = \'%s\' AND n.uid = %d LIMIT %d', 'company', $user_tmp->uid, 1);
+  }
+  $result = db_fetch_object($result);
+  return node_load($result->nid);
+}
+
+/**
+ * get current position of applicant
+ * @param $uid Integer
+ *  to indicate UID of applicant
+ */
+function get_current_position($uid = null) {
+  global $user;
+  if ($uid == null)
+    $uid = $user->uid;
+
+  $user_tmp = user_load($uid);
+  // check if user is an applicant and exit if not
+  if (!in_array('applicant', $user_tmp->roles))
+    return;
+  
+  $profile = get_user_profile($uid);
+  $current_position = array();
+  // print_r($profile);
+  if (!empty($profile->field_app_job_history))
+  foreach($profile->field_app_job_history as $job) {
+    // print_r($job);
+    if ($job['todate'] == 'Current') {
+      $current_position['company'] = $job['company'];
+      $current_position['position'] = $job['position'];
+      return $current_position;
+    }
+  }
+  return array('company' => '', 'position' => 'Currently Unemployed');
+}
