@@ -34,11 +34,12 @@ function profilewizard_menu() {
     'access arguments' => array('administer profile wizard'),
     'file' => 'profilewizard.admin.inc',
   );
-  $items['profilewizard/step/%'] = array(
+  $items['node/%/profilewizard/%'] = array(
     'title' => 'Profile Wizard',
     'page callback' => 'profilewizard_wizard',
-    'page arguments' => array(2),
+    'page arguments' => array(1,3),
     'access callback' => '_profilewizard_access',
+    'access arguments' => array(1),
     'type' => MENU_CALLBACK,
   );
   return $items;
@@ -50,12 +51,13 @@ function profilewizard_menu() {
  * @return boolean
  *  True if valid
  */
-function _profilewizard_access() {
+function _profilewizard_access($nid) {
   global $user;
+  $node = node_load($nid);
   return $user && $user->uid &&
   (
     // The user is not blocked and logged in at least once.
-    ($user->access && $user->status && user_access('use profile wizard'))
+    ($user->access && $user->status && ((user_access('use profile wizard') && $node->uid == $user->uid) || user_access('administer profile wizard')))
   );
 }
 
@@ -93,16 +95,21 @@ function _profilewizard_block() {
  * @return
  *  JSON data
  */
-function profilewizard_wizard($step) {
+function profilewizard_wizard($nid, $step) {
   $output = '';
-  module_load_include('inc', 'node', 'node.pages');
-  $profile = get_user_profile();
+  // module_load_include('inc', 'node', 'node.pages');
+  $node = node_load($nid);
+  // redirect if not the chosen wizard type
+  if ($node->type != variable_get('profilewizard_type', null))
+    drupal_not_found();
   switch($step) {
   	case 1:
     	// $output .= _profilewizard_step1($profile);
-    	$output .= drupal_get_form('profilewizard_applicant_step1_form', $profile);
+    	$output .= drupal_get_form('profilewizard_step1_form', $node);
+      break;
   	case 2:
-    	$output .= drupal_get_form('profilewizard_applicant_step2_form', $profile);
+    	$output .= drupal_get_form('profilewizard_applicant_step2_form', $node);
+      break;
   }
   return $output;
   /**//*
@@ -320,59 +327,50 @@ function profilewizard_step1_submit(&$from, &$form_state) {
   return $output;
 }/**/
 
-function profilewizard_applicant_step1_form($context, $profile) {
+function profilewizard_step1_form($context, $node) {
   $output = '';
-  $node = $profile;
-  // global $user;
-  $form_id = $profile->type.'_node_form';
+  $form_id = $node->type.'_node_form';
   $form_state = array();
   
   module_load_include('inc', 'node', 'node.pages'); 
   
   // Initialize settings:
-  $form_old = drupal_retrieve_form($form_id, $form_state, $profile);
-  drupal_prepare_form($form_id, $form_old, $form_state);
-  drupal_process_form($form_id, $form_old, $form_state);
-  // $form['group_avatar'] = array(
-    // '#type' => 'fieldset',
-    // '#title' => 'test',
-  // );
-  $form['group_avatar']['field_profile_image'] = $form_old['group_avatar']['field_profile_image'];
-  
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Next'),
-    '#weight' => 999,
-  );
-  $form_old['#id'];
-  $form_old['#action'];
-  // $form_old['#validate'] = array('ourmodule_ourvalidationfunc' => array());
-  unset($form_old['#submit']);
-  $form_old['submit'] = array('profilewizard_applicant_step1_form_submit'); 
-  $form_old['buttons']['submit']['#submit'] = array('profilewizard_applicant_step1_form_submit'); 
-  
+  $form = drupal_retrieve_form($form_id, $form_state, $node);
+  unset($form['buttons']['preview']);
+  unset($form['buttons']['delete']);
   // print_r($form);
+  /**/
   
+  // $form['submit'] = array('profilewizard_step1_form_submit'); 
+  // $form['buttons']['submit']['#submit'] = array('profilewizard_step1_form_submit'); 
+  drupal_prepare_form($form_id, $form, $form_state);
+  drupal_process_form($form_id, $form, $form_state);
+  $form['buttons']['submit']['#value'] = t('Next');
+  $form['buttons']['submit']['#submit'] = array('profilewizard_step1_form_submit');
+  // print_r($form);
+  // print_r(variable_get('profilewizard_fields', null));
   return $form;
 }
 
-function profilewizard_applicant_step1_form_submit($form, &$form_state) {
-  $node = get_user_profile();
+function profilewizard_step1_form_submit($form, &$form_state) {
+  // echo '<pre>'.print_r($form_state, 1).'</pre>';
+  $node = node_load($form_state['values']['nid']);
+  
   $form_id = $node->type.'_node_form';
   $form_state_new = array();
-  module_load_include('inc', 'node', 'node.pages'); 
+  $values = array();
+  module_load_include('inc', 'node', 'node.pages');
+  // get fields from settings page
+  $fields = variable_get('profilewizard_fields', null) ;
+  foreach($fields as $field) {
+    $values[$field] = $form_state['values'][$field];
+  }
+  $values['op'] = t('Save');
+  $form_state_new['values'] = $values;
+  $form_state_new['node'] = (array)$node;
   
-  // Initialize settings:
-  $form_old = drupal_retrieve_form($form_id, $form_state_new, $node);
-  drupal_prepare_form($form_id, $form_old, $form_state_new);
-  drupal_process_form($form_id, $form_old, $form_state_new);
-  
-  // $form_state_new['values']['field_profile_image'] = $form_state_new['values']['field_profile_image'];
-  // print_r($form_state_new['values']['field_profile_image']);
-  // print_r($form_state['values']['field_profile_image']);
-  // print '123';
-  node_form_submit_build_node($form_id, $form_state_new);
-  node_form_submit($form_id, $form_state_new);
+  drupal_execute($form_id, $form_state_new, (object)$node);
+  drupal_flush_all_caches();
 }
 
 function profilewizard_applicant_step2_form($context, $profile) {
@@ -403,7 +401,7 @@ function profilewizard_applicant_step2_form($context, $profile) {
   
   // print_r($form_old['group_about']['field_app_dob']);
   // $form['group_about']['field_app_dob'] = $form_old['group_about']['field_app_dob'];
-  print_r($form_old);
+  // print_r($form_old);
   return $form_old; 
 }
 
