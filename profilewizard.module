@@ -338,17 +338,39 @@ function profilewizard_step1_form($context, $node) {
   $form = drupal_retrieve_form($form_id, $form_state, $node);
   unset($form['buttons']['preview']);
   unset($form['buttons']['delete']);
-  // print_r($form);
-  /**/
-  
-  // $form['submit'] = array('profilewizard_step1_form_submit'); 
-  // $form['buttons']['submit']['#submit'] = array('profilewizard_step1_form_submit'); 
+
   drupal_prepare_form($form_id, $form, $form_state);
   drupal_process_form($form_id, $form, $form_state);
   $form['buttons']['submit']['#value'] = t('Next');
   $form['buttons']['submit']['#submit'] = array('profilewizard_step1_form_submit');
   // print_r($form);
-  // print_r(variable_get('profilewizard_fields', null));
+  $field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons');
+  // $field_types = array('text_textfield', 'textfield', 'checkbox', 'textarea');
+  $fields = variable_get('profilewizard_fields', null);
+  // clean list
+  foreach($fields as $key => $field) {
+     if ($field == null)
+      unset($fields[$key]);
+  }
+  print_r($fields);
+  
+  foreach($form as $key => $field) {
+    if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
+        unset($form[$key]);
+    }
+  }
+  
+  // hide defaults
+  $form['author']['#type'] = 'hidden';
+  $form['options']['#type'] = 'hidden';
+  $form['comment_settings']['#type'] = 'hidden';
+  $form['path']['#type'] = 'hidden';
+  $form['path_redirect']['#type'] = 'hidden';
+  $form['print']['#type'] = 'hidden';
+  $form['path']['#type'] = 'hidden';
+  $form['path']['#type'] = 'hidden';
+  $form['notifications']['#type'] = 'hidden';
+
   return $form;
 }
 
@@ -359,7 +381,7 @@ function profilewizard_step1_form_submit($form, &$form_state) {
   $form_id = $node->type.'_node_form';
   $form_state_new = array();
   $values = array();
-  module_load_include('inc', 'node', 'node.pages');
+  // module_load_include('inc', 'node', 'node.pages');
   // get fields from settings page
   $fields = variable_get('profilewizard_fields', null) ;
   foreach($fields as $field) {
@@ -424,7 +446,6 @@ function profilewizard_applicant_step2_form_submit($form, &$form_state) {
   node_form_submit_build_node($form_id, $form_state_new);
   node_form_submit($form_id, $form_state_new);
   // print_r($form_state);
-  
 }
 
 /**
