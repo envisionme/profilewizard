@@ -112,221 +112,11 @@ function profilewizard_wizard($nid, $step) {
       break;
   }
   return $output;
-  /**//*
-  
-  // Include CTools form wizard code and CTools object cache. 
-  ctools_include('wizard');
-  ctools_include('object-cache');
- 
-  // Wizard configuration. A complete set of parameters is best viewed in 
-  // documentation. 
-  $form_info = array(
-  // Wizard’s identifier. 
-    'id' => 'profile_wizard',
-    // Path to the pages of the wizard (the current step is a variable 
-    // argument). Should be the same as the path defined in hook_menu(). 
-        'path' => "profilewizard/step/%step",
-    // To show or not to show the progress
-    'show trail' => TRUE,
-    // Manage the visibility of additional navigation buttons. 
-    'show back' => FALSE,
-    'show cancel' => FALSE,
-    'show return' => FALSE,
-    // Button texts
-    'next text' => t('Next'),
-    // Special functions prompted by the wizard 
-    // - when navigating the to the next step 
-    'next callback' =>  'profilewizard_wizard_next',
-    // - at the completion of the final step 
-    'finish callback' => 'profilewizard_wizard_finish',
-    // Array that describes the identifiers and the names of steps 
-    // and their order. 
-    'Order' => array ( 
-    'order' => array(
-      '1' => t('Profile Photo'),
-      '2' => t('Basic Information'),
-      '3' => t('Current Job'),
-      '4' => t('Highest Qualification'),
-      '5' => t('Skills'),
-      '6' => t('Search Info'),
-      '7' => t('Finish'),
-    ),
- 
-    // Array, where the parameters are set for each form (the form of each step) 
-    // The form_id sets the form identifier, which is 
-    // also the name of the form building function. 
-    // The specified form_id are also used to determine the function name 
-    // for the current step: 
-    // - the function $form_id . '_validate' is used for validation, 
-    // - $form_id . '_submit' is used for submission. 
-    // Here you can define additional parameters, such as 
-    // include files that contain the code for each step (for the full list 
-    // of parameters, see documentation). 
-    'forms' => array(
-      '1' => array(
-        'form id' => 'profilewizard_step1',
-      ),
-      '2' => array(
-        'form id' => 'profilewizard_step2',
-      ),
-      '3' => array(
-        'form id' => 'profilewizard_step3',
-      ),
-      '4' => array(
-        'form id' => 'profilewizard_step4',
-      ),
-      '5' => array(
-        'form id' => 'profilewizard_step5',
-      ),
-      '6' => array(
-        'form id' => 'profilewizard_step6',
-      ),
-      '7' => array(
-        'form id' => 'profilewizard_step7',
-      ),
-    ),
-    )
-  );
- 
-  // An example of working with cache: this is where the transfer of
-  // information between the steps is carried out. Earl Miles recommends
-  // writing wrapper functions around CTools cache objects - 
-  // mymodule_cache_get() and mymodule_cache_set() functions.
-  // In this example it’s assumed that we store data transferred 
-  // between the steps within the $signup object. 
-  $profile_edit = profilewizard_cache_get();
-  if (!$profile_edit) {
-    // Set step = 1 - we have no data from the cache. 
-    $step = current(array_keys($form_info['order']));
-    $profile_edit = new stdClass();
-    profilewizard_cache_set($profile_edit);
-  }
-  // This way the data from the cache are available within each step within 
-  // $form_state array. 
-  $form_state['profile_edit_object'] = $profile_edit;
- 
-  // Generate the form output for the current step. 
-  $output = ctools_wizard_multistep_form($form_info, $step, $form_state);
- 
-  return $output;/**/
 }
 
 /**
- * Generation of a form. 
- * The difference from usual form generation functions is that we do not return 
- * the form array, but change the existing form transferred by a link. 
- * Note that $form already contains buttons for the current step thanks to
- * the wizard. 
- */ /*
-function profilewizard_step1(&$form, &$form_state) {
-  $form['age'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Please enter your age'),
-  );
-}
- 
-/**
- * Check the form values - there is nothing special compared to 
- * standard Forms API.
- */ /*
-function profilewizard_step1_validate(&$form, &$form_state) {
-  if ($form_state['values']['age'] < 18) {
-    form_set_error('age', t('You are too young!'));
-  }
-}
- 
-/**
- * In most cases we do not save data within the steps, and only 
- * validate and prepare them for wizard’s finish, where they are saved 
- * inside the function, which we defined as "finish callback" (see 
- * wizard settings). 
- */ /*
-function profilewizard_step1_submit(&$from, &$form_state) {
- 
-  // Transfer the information to the following steps by saving in the object
-  // that goes to cache. 
-  // This object should be saved in cache within the function, 
-  // defined as the "next callback".
-  $form_state['signup_object']->age = $form_state['values']['age'];
-}
-
-/**
- * Generate step 1 of the wizzard
- * @param $Profile Object
- *  Profile to use for check
- *
- * @return
- *  Themed string output of step 1 page
+ * Implementation of step 1 form
  */
-/*function _profilewizard_step1($profile) {
-  $output = '';
-  $node = $profile;
-  // global $user;
-  $form_id = $profile->type.'_node_form';
-  $form_state = array();
-  
-  module_load_include('inc', 'node', 'node.pages'); 
-  
-  // Initialize settings:
-  $form = drupal_retrieve_form($form_id, $form_state, $profile);
-  drupal_prepare_form($form_id, $form, $form_state);
-  drupal_process_form($form_id, $form, $form_state);
-
-  //— Indicate proper processor, submit function, validate function etc.
-  $form['#action'] = '/node/'.$profile->nid.'/edit';
-  $form['#validate'] = array('ourmodule_ourvalidationfunc' => array());
-  $form['#submit'] = array('_profile_wizard_submit' => array()); 
-
-  // ourmodule_form_disable_defaults( $form );
-  // dprint($form);
-  // print_r($form['#submit']);
-  // $form['group_about']['#type'] = 'hidden';
-  // $form['group_about']['field_name']['#access'] = FALSE;
-  // $form['group_about']['field_name'][0]['value']['#type'] = 'hidden';
-  /*$form['group_avatar']['field_video_link']['#type'] = 'hidden';
-  $form['group_contact']['#type'] = 'hidden';
-  $form['group_app_career_info']['#type'] = 'hidden';
-  $form['group_app_communities']['#type'] = 'hidden';
-  $form['group_app_im_networks']['#type'] = 'hidden';
-  // $form['group_links']['#type'] = 'hidden';
-  $form['group_app_communities']['#type'] = 'hidden';
-
-  /*$form['attachments']['#collapsed'] = 0;
-  $form['body_filter']['format'] = null;
-  $form['format'] = array('#type' => 'hidden', '#value' => 1);
-  $form['log'] = null;
-  $form['log'] = array('#type' => 'hidden', '#value' => '');
-
-  $form['comment_settings'] = null;
-  $form['comment'] = array('#type' => 'hidden', '#value' => 2); 
-  $form['menu'] = null;
-     
-  $form['body_filter']['body']['#rows'] = "5";
-
-  $authorname = $user->name;
-  $form['author'] = null;
-  $form['name'] = array('#type' => 'hidden', '#value' => $authorname);
-  $form['options'] = null;
-  $form['path'] = null;
-  $form['status'] = array('#type' => 'hidden', '#value' => 1);
-  $form['preview']=null;/**/
-  
-  /*$form['author']['#type'] = 'hidden';
-  $form['options']['#type'] = 'hidden';
-  $form['comment_settings']['#type'] = 'hidden';
-  $form['path']['#type'] = 'hidden';
-  $form['path_redirect']['#type'] = 'hidden';
-  $form['print']['#type'] = 'hidden';
-  $form['path']['#type'] = 'hidden';
-  $form['path']['#type'] = 'hidden';
-  $form['notifications']['#type'] = 'hidden';/**//*
-  
-//— Render the form:
-  $output = drupal_render_form($form_id, $form);
-  // $ouput = drupal_get_form($form_id, $node);
-  return $output;
-}/**/
-
 function profilewizard_step1_form($context, $node) {
   $output = '';
   $form_id = $node->type.'_node_form';
@@ -352,7 +142,7 @@ function profilewizard_step1_form($context, $node) {
      if ($field == null)
       unset($fields[$key]);
   }
-  print_r($fields);
+  // print_r($fields);
   
   foreach($form as $key => $field) {
     if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
@@ -374,6 +164,9 @@ function profilewizard_step1_form($context, $node) {
   return $form;
 }
 
+/**
+ * Implementation of step 1 form submit
+ */
 function profilewizard_step1_form_submit($form, &$form_state) {
   // echo '<pre>'.print_r($form_state, 1).'</pre>';
   $node = node_load($form_state['values']['nid']);
