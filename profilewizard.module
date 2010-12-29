@@ -123,6 +123,9 @@ function profilewizard_step1_form($context, $node) {
   $form_state = array();
   
   module_load_include('inc', 'node', 'node.pages'); 
+  module_load_include('inc', 'imagefield', 'imagefield_widget');
+  module_load_include('inc', 'filefield', 'filefield_widget');
+  // module_load_include('inc', 'content', 'includes/content.crud');
   
   // Initialize settings:
   $form = drupal_retrieve_form($form_id, $form_state, $node);
@@ -134,7 +137,7 @@ function profilewizard_step1_form($context, $node) {
   $form['buttons']['submit']['#value'] = t('Next');
   $form['buttons']['submit']['#submit'] = array('profilewizard_step1_form_submit');
   // print_r($form);
-  $field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info');
+  $field_keys = array(/*'#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded',/**/ '#field_info');
   // $field_types = array('text_textfield', 'textfield', 'checkbox', 'textarea');
   $fields = variable_get('profilewizard_fields', null);
   // clean list of fields to show
@@ -147,8 +150,9 @@ function profilewizard_step1_form($context, $node) {
   // hide unwanted fields
   foreach($form as $key => $field) {
     // echo '\''.$key.'\',<br/>';
-    if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
-        unset($form[$key]);
+    if (strpos($key, 'field_') && !in_array($key, $fields) && !in_array($key, $field_keys)) {
+    // if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
+        // unset($form[$key]);
     }
   }
   
@@ -176,7 +180,10 @@ function profilewizard_step1_form_submit($form, &$form_state) {
   $form_id = $node->type.'_node_form';
   $form_state_new = array();
   $values = array();
-  // module_load_include('inc', 'node', 'node.pages');
+  module_load_include('inc', 'node', 'node.pages');
+  module_load_include('inc', 'imagefield', 'imagefield_widget');
+  module_load_include('inc', 'filefield', 'filefield_widget');
+  // module_load_include('inc', 'content', 'includes/content.crud');
   // get fields from settings page
   $fields = variable_get('profilewizard_fields', null) ;
   foreach($fields as $field) {
@@ -188,59 +195,6 @@ function profilewizard_step1_form_submit($form, &$form_state) {
   
   drupal_execute($form_id, $form_state_new, (object)$node);
   drupal_flush_all_caches();
-}
-
-function profilewizard_applicant_step2_form($context, $profile) {
-  $output = '';
-  $node = $profile;
-  $form_id = $profile->type.'_node_form';
-  $form_state = array();
-  
-  module_load_include('inc', 'node', 'node.pages'); 
-  
-  // Initialize settings:
-  $form_old = drupal_retrieve_form($form_id, $form_state, $profile);
-  drupal_prepare_form($form_id, $form_old, $form_state);
-  drupal_process_form($form_id, $form_old, $form_state);
-  
-  /* $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Next'),
-    '#weight' => 999,
-  ); */
-  $form_old['#id'];
-  $form_old['#action'];
-  // $form_old['#validate'] = array('ourmodule_ourvalidationfunc' => array());
-  unset($form_old['#submit']);
-  unset($form_old['buttons']);
-  // $form_old['submit'] = array('profilewizard_applicant_step2_form_submit'); 
-  // $form_old['buttons']['submit']['#submit'] = array('profilewizard_applicant_step2_form_submit'); 
-  
-  // print_r($form_old['group_about']['field_app_dob']);
-  // $form['group_about']['field_app_dob'] = $form_old['group_about']['field_app_dob'];
-  // print_r($form_old);
-  return $form_old; 
-}
-
-function profilewizard_applicant_step2_form_submit($form, &$form_state) {
-  $node = get_user_profile();
-  $form_id = $node->type.'_node_form';
-  $form_state_new = array();
-  module_load_include('inc', 'node', 'node.pages'); 
-  
-  // Initialize settings:
-  $form_old = drupal_retrieve_form($form_id, $form_state_new, $node);
-  drupal_prepare_form($form_id, $form_old, $form_state_new);
-  drupal_process_form($form_id, $form_old, $form_state_new);
-  // $form_state_new['values']['field_app_dob'][0]['value'] = $form_state['clicked_button']['#post']['field_app_dob'][0]['value']['date'];
-  // print_r($form_state_new['values']['field_profile_image']);
-  // print_r($form_state['values']['field_profile_image']);
-  // print '123';
-  // print_r($form_state_new);
-  // $form_state = array_merge($form_state_new['values'], $form_state['values']);
-  node_form_submit_build_node($form_id, $form_state_new);
-  node_form_submit($form_id, $form_state_new);
-  // print_r($form_state);
 }
 
 /**
