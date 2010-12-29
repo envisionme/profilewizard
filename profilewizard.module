@@ -134,17 +134,19 @@ function profilewizard_step1_form($context, $node) {
   $form['buttons']['submit']['#value'] = t('Next');
   $form['buttons']['submit']['#submit'] = array('profilewizard_step1_form_submit');
   // print_r($form);
-  $field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons');
+  $field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info');
   // $field_types = array('text_textfield', 'textfield', 'checkbox', 'textarea');
   $fields = variable_get('profilewizard_fields', null);
-  // clean list
+  // clean list of fields to show
   foreach($fields as $key => $field) {
      if ($field == null)
       unset($fields[$key]);
   }
   // print_r($fields);
   
+  // hide unwanted fields
   foreach($form as $key => $field) {
+    // echo '\''.$key.'\',<br/>';
     if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
         unset($form[$key]);
     }
