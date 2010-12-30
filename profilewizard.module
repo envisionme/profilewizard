@@ -121,6 +121,13 @@ function profilewizard_step1_form($context, $node) {
   $output = '';
   $form_id = $node->type.'_node_form';
   $form_state = array();
+  $fields = variable_get('profilewizard_fields', null);
+  
+  // clean list of fields to show
+  foreach($fields as $key => $field) {
+     if ($field == null)
+      unset($fields[$key]);
+  }
   
   module_load_include('inc', 'node', 'node.pages'); 
   module_load_include('inc', 'imagefield', 'imagefield_widget');
@@ -133,26 +140,34 @@ function profilewizard_step1_form($context, $node) {
   unset($form['buttons']['delete']);
 
   drupal_prepare_form($form_id, $form, $form_state);
+  
+  // save all file field prepare data because they conflict after form processing
+  $prepare_fields = array();
+  $prepare_types = array('filefield_widget', 'imagefield_widget', 'imagefield_crop_widget');
+  foreach($fields as $field) {
+    if (in_array($form[$field][0]['#type'], $prepare_types))
+      $prepare_fields[$field] = $form[$field];
+  }
+  
   drupal_process_form($form_id, $form, $form_state);
+  
+  // restore all filefield prepare data because of conflict
+  foreach($fields as $field) {
+		$form[$field] = $prepare_fields[$field];
+  }
+  // print_r($form);
+  
   $form['buttons']['submit']['#value'] = t('Next');
   $form['buttons']['submit']['#submit'] = array('profilewizard_step1_form_submit');
-  // print_r($form);
-  $field_keys = array(/*'#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded',/**/ '#field_info');
-  // $field_types = array('text_textfield', 'textfield', 'checkbox', 'textarea');
-  $fields = variable_get('profilewizard_fields', null);
-  // clean list of fields to show
-  foreach($fields as $key => $field) {
-     if ($field == null)
-      unset($fields[$key]);
-  }
+  $field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id');
+  
   // print_r($fields);
   
   // hide unwanted fields
   foreach($form as $key => $field) {
-    // echo '\''.$key.'\',<br/>';
-    if (strpos($key, 'field_') && !in_array($key, $fields) && !in_array($key, $field_keys)) {
-    // if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
-        // unset($form[$key]);
+    // if (strpos($key, 'field_') && !in_array($key, $fields) && !in_array($key, $field_keys)) {
+    if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
+        unset($form[$key]);
     }
   }
   
@@ -166,7 +181,6 @@ function profilewizard_step1_form($context, $node) {
   $form['path']['#type'] = 'hidden';
   $form['path']['#type'] = 'hidden';
   $form['notifications']['#type'] = 'hidden';
-
   return $form;
 }
 
@@ -180,10 +194,10 @@ function profilewizard_step1_form_submit($form, &$form_state) {
   $form_id = $node->type.'_node_form';
   $form_state_new = array();
   $values = array();
-  module_load_include('inc', 'node', 'node.pages');
+	module_load_include('inc', 'node', 'node.pages');
+	module_load_include('inc', 'filefield', 'filefield_widget');
   module_load_include('inc', 'imagefield', 'imagefield_widget');
-  module_load_include('inc', 'filefield', 'filefield_widget');
-  // module_load_include('inc', 'content', 'includes/content.crud');
+  module_load_include('inc', 'content', 'includes/content.crud');
   // get fields from settings page
   $fields = variable_get('profilewizard_fields', null) ;
   foreach($fields as $field) {
@@ -194,7 +208,7 @@ function profilewizard_step1_form_submit($form, &$form_state) {
   $form_state_new['node'] = (array)$node;
   
   drupal_execute($form_id, $form_state_new, (object)$node);
-  drupal_flush_all_caches();
+  // drupal_flush_all_caches();
 }
 
 /**
