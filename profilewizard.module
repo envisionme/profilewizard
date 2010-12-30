@@ -93,36 +93,31 @@ function _profilewizard_block() {
  * Callback returning the the correct form
  *
  * @return
- *  JSON data
+ *  String data
  */
 function profilewizard_wizard($nid, $step) {
   $output = '';
   // module_load_include('inc', 'node', 'node.pages');
   $node = node_load($nid);
   // redirect if not the chosen wizard type
-  if ($node->type != variable_get('profilewizard_type', null))
+  if ($node->type != variable_get('profilewizard_type', null)) {
     drupal_not_found();
-  switch($step) {
-  	case 1:
-    	// $output .= _profilewizard_step1($profile);
-    	$output .= drupal_get_form('profilewizard_step1_form', $node);
-      break;
-  	case 2:
-    	$output .= drupal_get_form('profilewizard_applicant_step2_form', $node);
-      break;
-  }
+		exit();
+	}
+ 
+  $output .= drupal_get_form('profilewizard_step_form', $node, $step);
   return $output;
 }
 
 /**
- * Implementation of step 1 form
+ * Implementation of step form
  */
-function profilewizard_step1_form($context, $node) {
+function profilewizard_step_form($context, $node, $step) {
   $output = '';
   $form_id = $node->type.'_node_form';
   $form_state = array();
-  $fields = variable_get('profilewizard_fields', null);
-  
+  $fields = variable_get('profilewizard_fields_step'.$step, null);
+	
   // clean list of fields to show
   foreach($fields as $key => $field) {
      if ($field == null)
@@ -145,27 +140,24 @@ function profilewizard_step1_form($context, $node) {
   $prepare_fields = array();
   $prepare_types = array('filefield_widget', 'imagefield_widget', 'imagefield_crop_widget');
   foreach($fields as $field) {
-    if (in_array($form[$field][0]['#type'], $prepare_types))
+    // if (in_array($form[$field][0]['#type'], $prepare_types))
       $prepare_fields[$field] = $form[$field];
   }
   
   drupal_process_form($form_id, $form, $form_state);
   
   // restore all filefield prepare data because of conflict
+	// print_r($prepare_fields);
   foreach($fields as $field) {
 		$form[$field] = $prepare_fields[$field];
   }
-  // print_r($form);
   
   $form['buttons']['submit']['#value'] = t('Next');
-  $form['buttons']['submit']['#submit'] = array('profilewizard_step1_form_submit');
+  $form['buttons']['submit']['#submit'] = array('profilewizard_step_form_submit');
   $field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id');
-  
-  // print_r($fields);
   
   // hide unwanted fields
   foreach($form as $key => $field) {
-    // if (strpos($key, 'field_') && !in_array($key, $fields) && !in_array($key, $field_keys)) {
     if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
         unset($form[$key]);
     }
@@ -181,14 +173,21 @@ function profilewizard_step1_form($context, $node) {
   $form['path']['#type'] = 'hidden';
   $form['path']['#type'] = 'hidden';
   $form['notifications']['#type'] = 'hidden';
+	
+	// pass form step number
+	$form['profilewizard']['step'] = array(
+		'#type' => 'value',
+		'#value' => $step,
+	);
   return $form;
 }
 
 /**
  * Implementation of step 1 form submit
  */
-function profilewizard_step1_form_submit($form, &$form_state) {
+function profilewizard_step_form_submit($form, &$form_state) {
   // echo '<pre>'.print_r($form_state, 1).'</pre>';
+	$step = $form_state['values']['step'];
   $node = node_load($form_state['values']['nid']);
   
   $form_id = $node->type.'_node_form';
@@ -199,7 +198,7 @@ function profilewizard_step1_form_submit($form, &$form_state) {
   module_load_include('inc', 'imagefield', 'imagefield_widget');
   module_load_include('inc', 'content', 'includes/content.crud');
   // get fields from settings page
-  $fields = variable_get('profilewizard_fields', null) ;
+  $fields = variable_get('profilewizard_fields_step'.$step, null) ;
   foreach($fields as $field) {
     $values[$field] = $form_state['values'][$field];
   }

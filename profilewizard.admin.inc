@@ -33,13 +33,42 @@ function profilewizard_settings_form() {
     $fields[$field['field_name']] = $field['widget']['label'];
   }
   
-  if (sizeof($fields) > 0)
-  $form['profilewizard_fields'] = array(
-    '#type' => 'checkboxes',
-    '#title' => t('Fields to use'),
-    '#default_value' => variable_get('profilewizard_fields', null),
-    '#options' => $fields,
-    '#description' => t('Fields to use for the profile wizard'),
+	if (sizeof($fields) > 0)
+	$form['profilewizard_steps'] = array(
+    '#type' => 'select',
+    '#title' => t('Amount of steps needed'),
+    '#default_value' => variable_get('profilewizard_steps', null),
+    '#options' => array(1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5),
+    '#description' => t('Amount of steps to be used for wizard'),
   );
+	
+  if (sizeof($fields) > 0 && variable_get('profilewizard_steps', null) == 1) {
+		$form['profilewizard_fields'] = array(
+			'#type' => 'checkboxes',
+			'#title' => t('Fields to use'),
+			'#default_value' => variable_get('profilewizard_fields', null),
+			'#options' => $fields,
+			'#description' => t('Fields to use for the profile wizard'),
+		);
+	} elseif (sizeof($fields) > 0 && variable_get('profilewizard_steps', null) > 0) {
+		// iterate through and give each step a it's own fieldset
+		for ($step = 1; $step <= variable_get('profilewizard_steps', null); $step++) {
+			$form['step'.$step] = array(
+				'#type' => 'fieldset',
+				'#title' => t('Step '.$step),
+				// '#weight' => 5,
+				'#collapsible' => TRUE, 
+				'#collapsed' => TRUE,
+			);
+			$form['step'.$step]['profilewizard_fields_step'.$step] = array(
+				'#type' => 'checkboxes',
+				'#title' => t('Fields to use'),
+				'#default_value' => variable_get('profilewizard_fields_step'.$step, null),
+				'#options' => $fields,
+				'#description' => t('Fields to use for the profile wizard'),
+			);
+		}
+	}
+	
   return system_settings_form($form);
 }
