@@ -133,8 +133,25 @@ function profilewizard_step_form($context, $node, $step) {
   $form = drupal_retrieve_form($form_id, $form_state, $node);
   unset($form['buttons']['preview']);
   unset($form['buttons']['delete']);
-
+	unset($form['buttons']['submit']);
+	if ($step > 1)
+	$form['buttons']['prev'] = array(
+    '#type' => 'submit',
+		'#access' => 1,
+    '#value' => t('Previous'),
+    '#weight' => 9,
+    '#submit' => array('profilewizard_step_form_submit')
+	);
+	$form['buttons']['next'] = array(
+    '#type' => 'submit',
+		'#access' => 1,
+    '#value' => $step == variable_get('profilewizard_steps', null)?t('Finish'):t('Next'),
+    '#weight' => 10,
+    '#submit' => array('profilewizard_step_form_submit')
+	);
+	
   drupal_prepare_form($form_id, $form, $form_state);
+  // print_r($form['buttons']);
   
   // save all file field prepare data because they conflict after form processing
   $prepare_fields = array();
@@ -152,8 +169,8 @@ function profilewizard_step_form($context, $node, $step) {
 		$form[$field] = $prepare_fields[$field];
   }
   
-  $form['buttons']['submit']['#value'] = t('Next');
-  $form['buttons']['submit']['#submit'] = array('profilewizard_step_form_submit');
+	// $form['buttons']['submit']['#value'] = t('Next');
+  // $form['buttons']['submit']['#submit'] = array('profilewizard_step_form_submit');
   $field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id');
   
   // hide unwanted fields
@@ -179,7 +196,9 @@ function profilewizard_step_form($context, $node, $step) {
 		'#type' => 'value',
 		'#value' => $step,
 	);
-  return $form;
+	
+	// set up redirect
+	return $form;
 }
 
 /**
@@ -187,7 +206,7 @@ function profilewizard_step_form($context, $node, $step) {
  */
 function profilewizard_step_form_submit($form, &$form_state) {
   // echo '<pre>'.print_r($form_state, 1).'</pre>';
-	$step = $form_state['values']['step'];
+	$step = (int)$form_state['values']['step'];
   $node = node_load($form_state['values']['nid']);
   
   $form_id = $node->type.'_node_form';
@@ -208,6 +227,12 @@ function profilewizard_step_form_submit($form, &$form_state) {
   
   drupal_execute($form_id, $form_state_new, (object)$node);
   // drupal_flush_all_caches();
+	if (($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish') && $step < variable_get('profilewizard_steps', null))
+		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/'.($step+1);
+	elseif ($form_state['clicked_button']['#value'] == 'Previous' && $step > 1)
+		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/'.($step-1);
+	elseif ($step == variable_get('profilewizard_steps', null))
+		$form_state['redirect'] = '';
 }
 
 /**
