@@ -225,7 +225,8 @@ function profilewizard_step_form_submit($form, &$form_state) {
   $form_state_new['values'] = $values;
   $form_state_new['node'] = (array)$node;
   
-  drupal_execute($form_id, $form_state_new, (object)$node);
+  if ($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish')
+		drupal_execute($form_id, $form_state_new, (object)$node);
   // drupal_flush_all_caches();
 	if (($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish') && $step < variable_get('profilewizard_steps', null))
 		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/'.($step+1);
