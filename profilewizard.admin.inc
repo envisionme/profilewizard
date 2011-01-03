@@ -26,12 +26,17 @@ function profilewizard_settings_form() {
     '#description' => t('Content type to be used for the wizard process'),
   );
   
-  // get all type fields
-  $fields = array();
+	// if no other type selected return basic form
+  if (variable_get('profilewizard_type', null) == null)
+		return system_settings_form($form);
+		
+	// get all type fields
+	$fields = array();
   $type_info = content_types(variable_get('profilewizard_type', null));
   foreach($type_info['fields'] as $field) {
     $fields[$field['field_name']] = $field['widget']['label'];
   }
+	
   
 	if (sizeof($fields) > 0)
 	$form['profilewizard_steps'] = array(
