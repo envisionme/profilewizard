@@ -1,0 +1,8 @@
+ProfileWizard is a Drupal module intended for use as a User profile wizard. It integrates with CCk and allows selecting what fields should display on what step.
+
+Current todo list:
+* Step guide block
+	to illustrate the step process(Like breadcrumbs) and allow for skipping steps
+* Integration with Content Profile module
+* Ajaxify settings form (add another step link etc) like:
+	http://www.ajaxlines.com/ajax/stuff/article/add_drupal_forms_using_ajax.php
