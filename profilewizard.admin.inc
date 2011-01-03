@@ -60,6 +60,12 @@ function profilewizard_settings_form() {
 				'#collapsible' => TRUE, 
 				'#collapsed' => TRUE,
 			);
+			$form['step'.$step]['profilewizard_label_step'.$step] = array(
+				'#type' => 'textfield',
+				'#title' => t('Step Label'),
+				'#default_value' => variable_get('profilewizard_label_step'.$step, null),
+				'#description' => t('Label name of the step'),
+			);
 			$form['step'.$step]['profilewizard_fields_step'.$step] = array(
 				'#type' => 'checkboxes',
 				'#title' => t('Fields to use'),
@@ -69,6 +75,5 @@ function profilewizard_settings_form() {
 			);
 		}
 	}
-	
   return system_settings_form($form);
 }

@@ -104,7 +104,7 @@ function profilewizard_wizard($nid, $step) {
     drupal_not_found();
 		exit();
 	}
- 
+	drupal_set_title(variable_get('profilewizard_label_step'.$step, null));
   $output .= drupal_get_form('profilewizard_step_form', $node, $step);
   return $output;
 }
@@ -147,6 +147,13 @@ function profilewizard_step_form($context, $node, $step) {
 		'#access' => 1,
     '#value' => $step == variable_get('profilewizard_steps', null)?t('Finish'):t('Next'),
     '#weight' => 10,
+    '#submit' => array('profilewizard_step_form_submit')
+	);
+	$form['buttons']['skip'] = array(
+    '#type' => 'submit',
+		'#access' => 1,
+    '#value' => t('Skip Process'),
+    '#weight' => 11,
     '#submit' => array('profilewizard_step_form_submit')
 	);
 	
@@ -206,6 +213,11 @@ function profilewizard_step_form($context, $node, $step) {
  */
 function profilewizard_step_form_submit($form, &$form_state) {
   // echo '<pre>'.print_r($form_state, 1).'</pre>';
+	// redirect to home page if skip button clicked
+	if ($form_state['clicked_button']['#value'] == 'Skip Process') {
+		$form_state['redirect'] = '';
+		return;
+	}
 	$step = (int)$form_state['values']['step'];
   $node = node_load($form_state['values']['nid']);
   
