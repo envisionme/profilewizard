@@ -84,9 +84,25 @@ function profilewizard_block($op='list', $delta=0, $edit=array()) {
  */
 function _profilewizard_block() {
   global $user;
-  if (user_access('use profile wizard')) {
+	// if not on the step process display link to 1st step page
+	if (user_access('use profile wizard') && (arg(0) == 'node' && arg(2) != 'profilewizard' && !is_numeric(arg(3)))) {
     return l('Profile Wizard', 'profilewizard/step/1');
   }
+	$node = node_load((int)arg(1));
+	$step = (int)arg(3);
+	$type = variable_get('profilewizard_type', null);
+	$steps = variable_get('profilewizard_steps', null);
+	
+	$output = '';
+	$step_list = array();
+	if ($type == $node->type)
+	// iterate through all steps and print label links
+	for($i = 1; $i <= $steps; $i++) {
+		$label = variable_get('profilewizard_label_step'.$i, null);
+		$step_list[] = l($label == null?'Step '.$i:$label, 'node/'.$node->nid.'/profilewizard/'.$i);
+	}
+	$output = theme_item_list($step_list, null, 'ol');
+	return $output;
 }
 
 /**
