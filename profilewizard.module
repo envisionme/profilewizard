@@ -70,7 +70,7 @@ function profilewizard_block($op='list', $delta=0, $edit=array()) {
       $block[0]['info'] = t('Profile Wizard');
       return $block;
     case 'view':
-      $blocks['subject'] = t('Profile Wizard');
+      $blocks['subject'] = t('');
       $blocks['content'] = _profilewizard_block();
       return $blocks;
   }
@@ -88,6 +88,10 @@ function _profilewizard_block() {
 	if (user_access('use profile wizard') && (arg(0) == 'node' && arg(2) != 'profilewizard' && !is_numeric(arg(3)))) {
     return l('Profile Wizard', 'profilewizard/step/1');
   }
+	
+	// add stylesheet
+	drupal_add_css(drupal_get_path('module', 'profilewizard').'/profilewizard.css');
+	
 	$node = node_load((int)arg(1));
 	$step = (int)arg(3);
 	$type = variable_get('profilewizard_type', null);
