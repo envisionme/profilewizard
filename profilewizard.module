@@ -183,31 +183,36 @@ function profilewizard_step_form($context, $node, $step) {
   // save all file field prepare data because they conflict after form processing
   $prepare_fields = array();
   $prepare_types = array('filefield_widget', 'imagefield_widget', 'imagefield_crop_widget');
+	
   foreach($fields as $field) {
-    // if (in_array($form[$field][0]['#type'], $prepare_types))
+    // Update the cached form with the new element at the right place in the form.
+		if (module_exists('fieldgroup') && ($group_name = _fieldgroup_field_get_group($node->type, $field))) {
+				$prepare_fields[$field] = $form[$group_name][$field];
+		} else {
+		// if (in_array($form[$field][0]['#type'], $prepare_types))
       $prepare_fields[$field] = $form[$field];
+		}
   }
+	
   
   drupal_process_form($form_id, $form, $form_state);
   
   // restore all filefield prepare data because of conflict
-	// print_r($prepare_fields);
-  foreach($fields as $field) {
+	foreach($fields as $field) {
+		// Update the cached form with the new element at the right place in the form.
 		$form[$field] = $prepare_fields[$field];
   }
-  
-	// $form['buttons']['submit']['#value'] = t('Next');
-  // $form['buttons']['submit']['#submit'] = array('profilewizard_step_form_submit');
-  $field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id');
+
+	$field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id');
   
   // hide unwanted fields
-  foreach($form as $key => $field) {
-    if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
-        unset($form[$key]);
-    }
-  }
+	foreach($form as $key => $field) {
+		if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
+			unset($form[$key]);
+		}
+	}
   
-  // hide defaults
+	// hide defaults
   $form['author']['#type'] = 'hidden';
   $form['options']['#type'] = 'hidden';
   $form['comment_settings']['#type'] = 'hidden';
