@@ -145,9 +145,10 @@ function profilewizard_step_form($context, $node, $step) {
   }
   
   module_load_include('inc', 'node', 'node.pages'); 
-  module_load_include('inc', 'imagefield', 'imagefield_widget');
-  module_load_include('inc', 'filefield', 'filefield_widget');
-  // module_load_include('inc', 'content', 'includes/content.crud');
+  if (module_exists('filefield'))
+		module_load_include('inc', 'filefield', 'filefield_widget');
+  if (module_exists('imagefield'))
+		module_load_include('inc', 'imagefield', 'imagefield_widget');
   
   // Initialize settings:
   $form = drupal_retrieve_form($form_id, $form_state, $node);
@@ -187,12 +188,7 @@ function profilewizard_step_form($context, $node, $step) {
   foreach($fields as $field) {
     // Update the cached form with the new element at the right place in the form.
 		if (module_exists('fieldgroup') && ($group_name = _fieldgroup_field_get_group($node->type, $field))) {
-			// if (isset($form['#multigroups']) && isset($form['#multigroups'][$group_name][$field])) {
-				// $form_element = $form[$group_name][0][$field];
-			// }
-			// else {
 				$prepare_fields[$field] = $form[$group_name][$field];
-			// }
 		} else {
 		// if (in_array($form[$field][0]['#type'], $prepare_types))
       $prepare_fields[$field] = $form[$field];
@@ -203,42 +199,21 @@ function profilewizard_step_form($context, $node, $step) {
   drupal_process_form($form_id, $form, $form_state);
   
   // restore all filefield prepare data because of conflict
-	// print_r($form[_fieldgroup_field_get_group($node->type, 'field_test2')]);
-	// echo _fieldgroup_field_get_group($node->type, 'field_test2');
-  foreach($fields as $field) {
-		// echo _fieldgroup_field_get_group($node->type, $field);
+	foreach($fields as $field) {
 		// Update the cached form with the new element at the right place in the form.
-		if (module_exists('fieldgroup') && ($group_name = _fieldgroup_field_get_group($node->type, $field))) {
-				$form[$group_name][$field] = $prepare_fields[$field];
-		} else
-			$form[$field] = $prepare_fields[$field];
+		$form[$field] = $prepare_fields[$field];
   }
 
 	$field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id');
   
   // hide unwanted fields
-	if (module_exists('fieldgroup')) {
-		// get all field groups of CCK fields to aid with cleanup
-		$field_groups = array();
-		foreach($fields as $key => $field) {
-			$field_group = _fieldgroup_field_get_group($node->type, $field);
-			if ($field_group != null)
-				$field_groups[] = $field_group;
+	foreach($form as $key => $field) {
+		if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
+			unset($form[$key]);
 		}
-		foreach($form as $key => $field) {
-			if (!in_array($key, $field_keys) && !in_array($key, $fields) && !in_array($key, $field_groups) ) {
-					unset($form[$key]);
-			}
-			
-		}
-	} else {
-		foreach($form as $key => $field) {
-			if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
-					unset($form[$key]);
-			}
-		}
-  }
-  // hide defaults
+	}
+  
+	// hide defaults
   $form['author']['#type'] = 'hidden';
   $form['options']['#type'] = 'hidden';
   $form['comment_settings']['#type'] = 'hidden';
