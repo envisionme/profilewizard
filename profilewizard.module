@@ -145,9 +145,10 @@ function profilewizard_step_form($context, $node, $step) {
   }
   
   module_load_include('inc', 'node', 'node.pages'); 
-  module_load_include('inc', 'imagefield', 'imagefield_widget');
-  module_load_include('inc', 'filefield', 'filefield_widget');
-  // module_load_include('inc', 'content', 'includes/content.crud');
+  if (module_exists('filefield'))
+		module_load_include('inc', 'filefield', 'filefield_widget');
+  if (module_exists('imagefield'))
+		module_load_include('inc', 'imagefield', 'imagefield_widget');
   
   // Initialize settings:
   $form = drupal_retrieve_form($form_id, $form_state, $node);
