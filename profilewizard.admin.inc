@@ -15,9 +15,15 @@ function profilewizard_settings_form() {
   $form = array();
   // get all content types
   $types = array(0 => 'none');
-  foreach (node_get_types('types') as  $type) {
+  foreach (content_profile_get_types() as  $type) {
     $types[$type->type] = $type->name;
   }
+	// return if no content profile type specified
+	if (count($types) <= 1) {
+		$form['error'] = array('#value' => 'No content profile types detected. Please mark a content type as a content profile first.');
+		return $form;
+	}
+	print_r(count($types));
   $form['profilewizard_type'] = array(
     '#type' => 'select',
     '#title' => t('Content-type for wizard'),

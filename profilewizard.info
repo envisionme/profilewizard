@@ -4,3 +4,4 @@ description = "A profile wizard to simplify the signup process for users"
 core = 6.x
 php = 5.1
 package = "NoJoShmo - Custom Modules"
+dependencies[] = "content_profile"

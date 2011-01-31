@@ -52,6 +52,7 @@ function profilewizard_menu() {
  *  True if valid
  */
 function _profilewizard_access($nid) {
+	echo '** '.$nid;
   global $user;
   $node = node_load($nid);
   return $user && $user->uid &&
