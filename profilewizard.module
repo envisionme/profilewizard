@@ -26,6 +26,7 @@ function profilewizard_perm() {
  * Implementation of hook_menu()
  */
 function profilewizard_menu() {
+	// $items = array();
   $items['admin/settings/profilewizard'] = array(
     'title' => 'Profile Wizard',
     'description' => 'Configure the profile wizard.',
@@ -34,12 +35,12 @@ function profilewizard_menu() {
     'access arguments' => array('administer profile wizard'),
     'file' => 'profilewizard.admin.inc',
   );
-  $items['node/%/profilewizard/%'] = array(
+  $items['user/%/profilewizard/step/%'] = array(
     'title' => 'Profile Wizard',
     'page callback' => 'profilewizard_wizard',
-    'page arguments' => array(1,3),
-    'access callback' => '_profilewizard_access',
-    'access arguments' => array(1),
+    'page arguments' => array(1,4),
+    // 'access callback' => '_profilewizard_access_wizard',
+    // 'access arguments' => array(1),
     'type' => MENU_CALLBACK,
   );
   return $items;
@@ -51,10 +52,9 @@ function profilewizard_menu() {
  * @return boolean
  *  True if valid
  */
-function _profilewizard_access($nid) {
-	echo '** '.$nid;
+function _profilewizard_access_wizard($uid) {
   global $user;
-  $node = node_load($nid);
+  $node = content_profile_load('uprofile', $uid);
   return $user && $user->uid &&
   (
     // The user is not blocked and logged in at least once.
@@ -85,18 +85,24 @@ function profilewizard_block($op='list', $delta=0, $edit=array()) {
  */
 function _profilewizard_block() {
   global $user;
-	// if not on the step process display link to 1st step page
-	if (user_access('use profile wizard') && (arg(0) == 'node' && arg(2) != 'profilewizard' && !is_numeric(arg(3)))) {
-    return l('Profile Wizard', 'profilewizard/step/1');
-  }
+	$type = variable_get('profilewizard_type', null);
+	$steps = variable_get('profilewizard_steps', null);
 	
+	// load node
+	if (arg(0) == node && is_numeric(arg(1)))
+		$node = node_load(arg(1));
+	else
+		return;
+	
+	// if not on the step process display link to 1st step page
+	if (user_access('use profile wizard') && arg(2) != 'profilewizard' && $node->type == $type) {
+    return l('Profile Wizard', 'node/'.arg(1).'/profilewizard/step/1');
+  }
 	// add stylesheet
 	drupal_add_css(drupal_get_path('module', 'profilewizard').'/profilewizard.css');
 	
 	$node = node_load((int)arg(1));
 	$step = (int)arg(3);
-	$type = variable_get('profilewizard_type', null);
-	$steps = variable_get('profilewizard_steps', null);
 	
 	$output = '';
 	$step_list = array();
@@ -116,10 +122,11 @@ function _profilewizard_block() {
  * @return
  *  String data
  */
-function profilewizard_wizard($nid, $step) {
+function profilewizard_wizard($uid, $step) {
   $output = '';
   // module_load_include('inc', 'node', 'node.pages');
-  $node = node_load($nid);
+  // load users content profile
+	$node = content_profile_load('uprofile', $uid);
   // redirect if not the chosen wizard type
   if ($node->type != variable_get('profilewizard_type', null)) {
     drupal_not_found();
@@ -180,7 +187,6 @@ function profilewizard_step_form($context, $node, $step) {
 	);
 	
   drupal_prepare_form($form_id, $form, $form_state);
-  // print_r($form['buttons']);
   
   // save all file field prepare data because they conflict after form processing
   $prepare_fields = array();
@@ -273,128 +279,4 @@ function profilewizard_step_form_submit($form, &$form_state) {
 		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/'.($step-1);
 	elseif ($step == variable_get('profilewizard_steps', null))
 		$form_state['redirect'] = '';
-}
-
-/**
- * get UID from url (user, company and node pages)
- *
- * @return number
- *  apropriate UID
- */
-function get_uid_from_url() {
-  // return uid for normal pages
-  if (arg(0) == 'user' && is_numeric(arg(1)))
-    return arg(1);
-  // return admin page holder uid
-  if (arg(0) == 'user' && (arg(1) == null || arg(1) == 'admin') || arg(0) == 'recruiter' && arg(1) == 'admin' || arg(0) == 'company' && arg(1) == 'admin' || arg(0) == 'usersearch') {
-    global $user;
-    return $user->uid;
-  }
-  // return company uid
-  if (arg(0) == 'company' && is_numeric(arg(1)))
-    return arg(1);
-  // return node author
-  if (arg(0) == 'node' && is_numeric(arg(1))) {
-    $node = node_load(arg(1));
-    if ($node->type == 'page')
-      return false;
-    if ($node->type != 'reference')
-      return $node->uid;
-    else {
-      return $node->field_user[0][uid];
-    }
-  }
-  if (arg(0) == 'node' && arg(1) == 'add') {
-    global $user;
-    return $user->uid;
-  }
-  return false;
-}
-
-/**
- * get user image from $uid
- *
- * @return string
- *  Themed image output
- */
-function get_user_image($uid = null, $preset = 'thumb-mini') {
-  global $user;
-  if ($uid == null)
-    $uid = $user->uid;
-
-  $user_tmp = user_load($uid);
-  $image_path = $user_tmp->picture;
-  if(in_array("applicant", $user_tmp->roles)) {
-    if (!$image_path || !file_exists($image_path)) {
-      // $result = db_query('SELECT nid FROM {node} n WHERE type = \'%s\' AND n.uid = %d LIMIT %d', 'uprofile', $user_tmp->uid, 1);
-      // $result = db_fetch_object($result);
-      $user_profile = get_user_profile($uid);
-      if ($user_profile->field_gender[0]['value'] == 'Male')
-        $image_path = 'sites/default/files/default-image-m.jpg';
-      elseif ($user_profile->field_gender[0]['value'] == 'Female')
-        $image_path = 'sites/default/files/default-image-f.jpg';
-      else
-        $image_path = 'sites/default/files/default-image.jpg';
-    }
-  } elseif (in_array("company", $user_tmp->roles)) {
-    $user_profile = get_user_profile($uid);
-    // if (file_exists($user_profile->field_company_logo[0]['filepath']))
-      // $image_path = $user_profile->field_company_logo[0]['filepath'];
-    // else
-      $image_path = 'sites/default/files/default-image.jpg';
-    // if ($preset == 'thumb-mini') 
-      // $preset = 'company-mini';
-  }
-  return theme('imagecache', $preset, $image_path, 'View Profile', 'View Profile');
-}
-
-/**
- * get user profile from $uid
- *
- * @return object
- *  Node containing user profile
- */
-function get_user_profile($uid = null) {
-  global $user;
-  if ($uid == null)
-    $uid = $user->uid;
-
-  $user_tmp = user_load($uid);
-  if (in_array('applicant', $user_tmp->roles)) {
-    $result = db_query('SELECT nid FROM {node} n WHERE type = \'%s\' AND n.uid = %d LIMIT %d', 'uprofile', $user_tmp->uid, 1);
-  } elseif (in_array('company', $user_tmp->roles)) {
-    $result = db_query('SELECT nid FROM {node} n WHERE type = \'%s\' AND n.uid = %d LIMIT %d', 'company', $user_tmp->uid, 1);
-  }
-  $result = db_fetch_object($result);
-  return node_load($result->nid);
-}
-
-/**
- * get current position of applicant
- * @param $uid Integer
- *  to indicate UID of applicant
- */
-function get_current_position($uid = null) {
-  global $user;
-  if ($uid == null)
-    $uid = $user->uid;
-
-  $user_tmp = user_load($uid);
-  // check if user is an applicant and exit if not
-  if (!in_array('applicant', $user_tmp->roles))
-    return;
-  
-  $profile = get_user_profile($uid);
-  $current_position = array();
-  // print_r($profile);
-  if (!empty($profile->field_app_job_history))
-  foreach($profile->field_app_job_history as $job) {
-    // print_r($job);
-    if ($job['todate'] == 'Current') {
-      $current_position['company'] = $job['company'];
-      $current_position['position'] = $job['position'];
-      return $current_position;
-    }
-  }
-  return array('company' => '', 'position' => 'Currently Unemployed');
 }

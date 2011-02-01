@@ -23,7 +23,6 @@ function profilewizard_settings_form() {
 		$form['error'] = array('#value' => 'No content profile types detected. Please mark a content type as a content profile first.');
 		return $form;
 	}
-	print_r(count($types));
   $form['profilewizard_type'] = array(
     '#type' => 'select',
     '#title' => t('Content-type for wizard'),
