@@ -41,7 +41,8 @@ function profilewizard_settings_form() {
   foreach($type_info['fields'] as $field) {
     $fields[$field['field_name']] = $field['widget']['label'];
   }
-	
+	// sorting field list
+	asort($fields);
   
 	if (sizeof($fields) > 0)
 	$form['profilewizard_steps'] = array(
