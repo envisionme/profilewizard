@@ -38,9 +38,25 @@ function profilewizard_settings_form() {
 	// get all type fields
 	$fields = array();
   $type_info = content_types(variable_get('profilewizard_type', null));
-  foreach($type_info['fields'] as $field) {
-    $fields[$field['field_name']] = $field['widget']['label'];
+
+	// add cck3 multigroup compatability
+	$field_groups = array();
+	foreach(fieldgroup_groups(variable_get('profilewizard_type', null)) as $group_name => $group) {
+		if ($group['group_type'] == 'multigroup')
+			$field_groups[$group_name] = $group['label'].' (multigroup)';
+	}
+
+	foreach($type_info['fields'] as $field) {
+		// only print fields not part of a multigroup
+		if (!empty($field_groups)) {
+		if (!array_key_exists(fieldgroup_get_group(variable_get('profilewizard_type', null), $field['field_name']), $field_groups))
+			$fields[$field['field_name']] = $field['widget']['label'];
+		} else
+			$fields[$field['field_name']] = $field['widget']['label'];
   }
+	
+	// add multigroup fields to selection list
+	$fields = array_merge($field_groups, $fields);
 	// sorting field list
 	asort($fields);
   

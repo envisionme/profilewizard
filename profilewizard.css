@@ -1,3 +1,37 @@
-#block-profilewizard-0 .item-list ol li {
+#block-profilewizard-0 .item-list ul {
+	border-bottom: 1px solid #EEEEEE;
+	overflow: auto;
+}
+
+#block-profilewizard-0 .item-list ul li {
 	display: inline;
 }
+
+#block-profilewizard-0 .item-list ul li a {
+	display: block;
+  float: left;
+  font-size: 1.5em;
+  line-height: 1.5em;
+  padding: 2px 20px 2px 2px;
+  text-decoration: none;
+	margin-bottom: 0.5em;
+}
+
+#block-profilewizard-0 .item-list ul li a .step {
+	background-color: #444;
+	margin-right: 10px;
+  padding: 2px 5px;
+	color: #fff;
+	font-size: 0.5em;
+	vertical-align: top;
+	line-height: 1em;
+}
+
+	#block-profilewizard-0 .item-list ul li a.active {
+		color: #333;
+		border-bottom: 3px solid #E50D64;
+	}
+
+	#block-profilewizard-0 .item-list ul li a.active .step {
+		background-color: #E50D64;
+	}
