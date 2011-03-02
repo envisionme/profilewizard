@@ -65,7 +65,7 @@ function profilewizard_settings_form() {
     '#type' => 'select',
     '#title' => t('Amount of steps needed'),
     '#default_value' => variable_get('profilewizard_steps', null),
-    '#options' => array(1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5),
+    '#options' => array(1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 6, 7 => 7),
     '#description' => t('Amount of steps to be used for wizard'),
   );
 	
