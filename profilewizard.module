@@ -180,6 +180,7 @@ function profilewizard_step_form($context, $node, $step) {
   unset($form['buttons']['preview']);
   unset($form['buttons']['delete']);
 	unset($form['buttons']['submit']);
+	unset($form['buttons']);
 	if ($step > 1)
 	$form['buttons']['prev'] = array(
     '#type' => 'submit',
@@ -202,7 +203,6 @@ function profilewizard_step_form($context, $node, $step) {
     '#weight' => 11,
     '#submit' => array('profilewizard_step_form_submit')
 	);
-	
   drupal_prepare_form($form_id, $form, $form_state);
   // save all file field prepare data because they conflict after form processing
   $prepare_fields = array();
@@ -224,7 +224,6 @@ function profilewizard_step_form($context, $node, $step) {
 		// Update the cached form with the new element at the right place in the form.
 		$form[$field] = $prepare_fields[$field];
   }
-  // dpm($form);
 	
 	$field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id', '#multigroups');
   // hide unwanted fields
@@ -245,6 +244,7 @@ function profilewizard_step_form($context, $node, $step) {
   $form['path']['#type'] = 'hidden';
   $form['notifications']['#type'] = 'hidden';
 	
+	
 	// pass form step number
 	$form['profilewizard']['step'] = array(
 		'#type' => 'value',
@@ -254,11 +254,9 @@ function profilewizard_step_form($context, $node, $step) {
 }
 
 /**
- * Implementation of step 1 form submit
+ * Implementation of step form submit
  */
 function profilewizard_step_form_submit($form, &$form_state) {
-	dpm($form_state);
-	// return;
 
 	// redirect to home page if skip button clicked
 	if ($form_state['clicked_button']['#value'] == 'Skip Process') {
@@ -267,11 +265,10 @@ function profilewizard_step_form_submit($form, &$form_state) {
 	}
 	$step = (int)$form_state['values']['step'];
   $node = node_load($form_state['values']['nid']);
-  
+	// dpm($node);
 	
   $form_id = $node->type.'_node_form';
-  $form_state_new = array();
-  $values = array();
+  // $form_state_new = array();
 	module_load_include('inc', 'node', 'node.pages');
 	module_load_include('inc', 'filefield', 'filefield_widget');
   module_load_include('inc', 'imagefield', 'imagefield_widget');
@@ -280,16 +277,19 @@ function profilewizard_step_form_submit($form, &$form_state) {
 	if (module_exists('content_multigroup'))
 		module_load_include('inc', 'content_multigroup', 'content_multigroup.node_form');
   // get fields from settings page
+  $values = array();
   $fields = variable_get('profilewizard_fields_step'.$step, null) ;
-  foreach($fields as $field) {
-    $values[$field] = $form_state['values'][$field];
-  }
-  $values['op'] = t('Save');
-  $form_state_new['values'] = $values;
-  $form_state_new['node'] = (array)$node;
-  
-  if ($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish')
-		drupal_execute($form_id, $form_state_new, (object)$node);
+  // $values['op'] = t('Save');
+  // $form_state['node'] = (array)$node;
+
+	// dpm($form_state);
+  if ($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish') {
+		// _drupal_execute($form_id, $form_state);//, (object)$node);
+		foreach($fields as $field) {
+			$node->$field = $form_state['values'][$field];
+		}
+		node_save($node);
+	}
   // drupal_flush_all_caches();
 	if (($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish') && $step < variable_get('profilewizard_steps', null))
 		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/step/'.($step+1);
