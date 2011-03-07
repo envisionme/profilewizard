@@ -137,9 +137,6 @@ function _profilewizard_block() {
  */
 function profilewizard_wizard($nid, $step) {
   $output = '';
-  // module_load_include('inc', 'node', 'node.pages');
-  // load users content profile
-	// $node = content_profile_load('uprofile', $uid);
 	$node = node_load($nid);
   // redirect if not the chosen wizard type
   if ($node->type != variable_get('profilewizard_type', null)) {
@@ -171,9 +168,6 @@ function profilewizard_step_form($context, $node, $step) {
 		module_load_include('inc', 'filefield', 'filefield_widget');
   if (module_exists('imagefield'))
 		module_load_include('inc', 'imagefield', 'imagefield_widget');
-	// cck3 multigroup
-	if (module_exists('content_multigroup'))
-		module_load_include('inc', 'content_multigroup', 'content_multigroup.node_form');
 
   // Initialize settings:
   $form = drupal_retrieve_form($form_id, $form_state, $node);
@@ -181,6 +175,8 @@ function profilewizard_step_form($context, $node, $step) {
   unset($form['buttons']['delete']);
 	unset($form['buttons']['submit']);
 	unset($form['buttons']);
+	
+	// print submit buttons
 	if ($step > 1)
 	$form['buttons']['prev'] = array(
     '#type' => 'submit',
@@ -203,18 +199,21 @@ function profilewizard_step_form($context, $node, $step) {
     '#weight' => 11,
     '#submit' => array('profilewizard_step_form_submit')
 	);
+	
   drupal_prepare_form($form_id, $form, $form_state);
   // save all file field prepare data because they conflict after form processing
   $prepare_fields = array();
-  // $prepare_types = array('filefield_widget', 'imagefield_widget', 'imagefield_crop_widget');
-	
   foreach($fields as $field) {
     // Update the cached form with the new element at the right place in the form.
-		if (module_exists('fieldgroup') && ($group_name = _fieldgroup_field_get_group($node->type, $field)) || strpos($field, '_group') > 0) {
-				$prepare_fields[$field] = $form[$group_name][$field];
-		} else {
-		// if (in_array($form[$field][0]['#type'], $prepare_types))
-      $prepare_fields[$field] = $form[$field];
+		if (module_exists('fieldgroup'))
+			$group_name = fieldgroup_get_group($node->type, $field);
+		// if in a normal fieldset
+		if (!empty($group_name)) {
+			$prepare_fields[$field] = $form[$group_name][$field];
+		}
+		// if a normal field (not multigroup)
+		elseif (strlen(strstr($field, 'group_')) == 0) {
+			$prepare_fields[$field] = $form[$field];
 		}
   }  
   drupal_process_form($form_id, $form, $form_state);
@@ -222,7 +221,8 @@ function profilewizard_step_form($context, $node, $step) {
   // restore all filefield prepare data because of conflict
 	foreach($fields as $field) {
 		// Update the cached form with the new element at the right place in the form.
-		$form[$field] = $prepare_fields[$field];
+		if (!empty($prepare_fields[$field]))
+			$form[$field] = $prepare_fields[$field];
   }
 	
 	$field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id', '#multigroups');
@@ -265,28 +265,36 @@ function profilewizard_step_form_submit($form, &$form_state) {
 	}
 	$step = (int)$form_state['values']['step'];
   $node = node_load($form_state['values']['nid']);
-	// dpm($node);
-	
   $form_id = $node->type.'_node_form';
+	// dpm($form_state);
+	
   // $form_state_new = array();
 	module_load_include('inc', 'node', 'node.pages');
 	module_load_include('inc', 'filefield', 'filefield_widget');
   module_load_include('inc', 'imagefield', 'imagefield_widget');
   module_load_include('inc', 'content', 'includes/content.crud');
-	// cck3 multigroup
-	if (module_exists('content_multigroup'))
-		module_load_include('inc', 'content_multigroup', 'content_multigroup.node_form');
   // get fields from settings page
-  $values = array();
-  $fields = variable_get('profilewizard_fields_step'.$step, null) ;
+  // $values = array();
+  $fields = variable_get('profilewizard_fields_step'.$step, null);
   // $values['op'] = t('Save');
   // $form_state['node'] = (array)$node;
 
 	// dpm($form_state);
   if ($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish') {
-		// _drupal_execute($form_id, $form_state);//, (object)$node);
+		// drupal_execute($form_id, $form_state, (object)$node);
 		foreach($fields as $field) {
-			$node->$field = $form_state['values'][$field];
+			// check if it's a multigroup and handle accordingly
+			if (strlen(strstr($field, 'group_')) > 0) {
+				foreach($form_state['values'][$field] as $delta => $group) {
+					// save individual values
+					foreach (array_keys((array)$group) as $field_name) {
+						// copy only legitemate fields
+						if ($field_name[0] != '_' && $field_name != null)
+							$node->{$field_name}[$delta]['value'] = $group[$field_name]['value'];
+					}
+				}
+			} else
+				$node->$field = $form_state['values'][$field];
 		}
 		node_save($node);
 	}
@@ -295,6 +303,6 @@ function profilewizard_step_form_submit($form, &$form_state) {
 		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/step/'.($step+1);
 	elseif ($form_state['clicked_button']['#value'] == 'Previous' && $step > 1)
 		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/step/'.($step-1);
-	elseif ($step == variable_get('profilewizard_steps', null))
-		$form_state['redirect'] = '';
+	// elseif ($step == variable_get('profilewizard_steps', null))
+		// $form_state['redirect'] = '';
 }
