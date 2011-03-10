@@ -203,6 +203,10 @@ function profilewizard_step_form($context, $node, $step) {
   drupal_prepare_form($form_id, $form, $form_state);
   // save all file field prepare data because they conflict after form processing
   $prepare_fields = array();
+	// get all 'standard' groups
+	$groups = fieldgroup_groups(variable_get('profilewizard_type', null));
+	
+	// dpm($fields);
   foreach($fields as $field) {
     // Update the cached form with the new element at the right place in the form.
 		if (module_exists('fieldgroup'))
@@ -210,10 +214,14 @@ function profilewizard_step_form($context, $node, $step) {
 		// if in a normal fieldset
 		if (!empty($group_name)) {
 			$prepare_fields[$field] = $form[$group_name][$field];
-		}
+		} 
 		// if a normal field (not multigroup)
 		elseif (strlen(strstr($field, 'group_')) == 0) {
 			$prepare_fields[$field] = $form[$field];
+		} else {
+			// dpm($groups[$field]['parent']);
+			if (!empty($groups[$field]['parent']))
+				$form[$field] = $form[$groups[$field]['parent']][$field];
 		}
   }  
   drupal_process_form($form_id, $form, $form_state);
@@ -266,7 +274,8 @@ function profilewizard_step_form_submit($form, &$form_state) {
 	$step = (int)$form_state['values']['step'];
   $node = node_load($form_state['values']['nid']);
   $form_id = $node->type.'_node_form';
-	// dpm($form_state);
+	// dpm($form_state['values']);
+	// dpm($node);
 	
   // $form_state_new = array();
 	module_load_include('inc', 'node', 'node.pages');
@@ -278,8 +287,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
   $fields = variable_get('profilewizard_fields_step'.$step, null);
   // $values['op'] = t('Save');
   // $form_state['node'] = (array)$node;
-
-	// dpm($form_state);
+	
   if ($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish') {
 		// drupal_execute($form_id, $form_state, (object)$node);
 		foreach($fields as $field) {
@@ -287,10 +295,11 @@ function profilewizard_step_form_submit($form, &$form_state) {
 			if (strlen(strstr($field, 'group_')) > 0) {
 				foreach($form_state['values'][$field] as $delta => $group) {
 					// save individual values
+					if (is_numeric($delta))
 					foreach (array_keys((array)$group) as $field_name) {
 						// copy only legitemate fields
 						if ($field_name[0] != '_' && $field_name != null)
-							$node->{$field_name}[$delta]['value'] = $group[$field_name]['value'];
+							$node->{$field_name}[$delta]['value'] = $group[$field_name][$delta]['value'];
 					}
 				}
 			} else
