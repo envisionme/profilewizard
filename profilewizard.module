@@ -295,7 +295,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
 			if (strlen(strstr($field, 'group_')) > 0) {
 				foreach($form_state['values'][$field] as $delta => $group) {
 					// save individual values
-					if (is_numeric($delta))
+					if (is_numeric($delta) && !empty((array)$group))
 					foreach (array_keys((array)$group) as $field_name) {
 						// copy only legitemate fields
 						if ($field_name[0] != '_' && $field_name != null)
