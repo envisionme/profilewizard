@@ -41,3 +41,8 @@
 	#block-profilewizard-0 .item-list ul li a.active .step {
 		background-color: #777;
 	}
+
+/* Hide filefield ajax upload button */
+#profilewizard-form .form-item .filefield-upload .form-submit.ahah-processed {
+	display: none;
+}

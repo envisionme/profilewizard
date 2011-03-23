@@ -206,7 +206,6 @@ function profilewizard_step_form($context, $node, $step) {
 	// get all 'standard' groups
 	$groups = fieldgroup_groups(variable_get('profilewizard_type', null));
 	
-	// dpm($fields);
   foreach($fields as $field) {
     // Update the cached form with the new element at the right place in the form.
 		if (module_exists('fieldgroup'))
@@ -219,7 +218,6 @@ function profilewizard_step_form($context, $node, $step) {
 		elseif (strlen(strstr($field, 'group_')) == 0) {
 			$prepare_fields[$field] = $form[$field];
 		} else {
-			// dpm($groups[$field]['parent']);
 			if (!empty($groups[$field]['parent']))
 				$form[$field] = $form[$groups[$field]['parent']][$field];
 		}
@@ -229,30 +227,41 @@ function profilewizard_step_form($context, $node, $step) {
   // restore all filefield prepare data because of conflict
 	foreach($fields as $field) {
 		// Update the cached form with the new element at the right place in the form.
-		if (!empty($prepare_fields[$field]))
+		if (!empty($prepare_fields[$field])) {
 			$form[$field] = $prepare_fields[$field];
+		}
   }
 	
 	$field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id', '#multigroups');
   // hide unwanted fields
 	foreach($form as $key => $field) {
 		if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
-			unset($form[$key]);
+			
+			// preserve fieldset hierarchy by hiding fieldsets
+			if ($field['#type'] == 'fieldset') {
+				$form[$key]['#access'] = false;
+			} else {
+				if (!empty($form[$key]['#type']))
+					$form[$key]['#type'] = 'hidden';
+				else
+					unset($form[$key]);
+			}
 		}
 	}
   
 	// hide defaults
-  $form['author']['#type'] = 'hidden';
-  $form['options']['#type'] = 'hidden';
-  $form['comment_settings']['#type'] = 'hidden';
-  $form['path']['#type'] = 'hidden';
-  $form['path_redirect']['#type'] = 'hidden';
-  $form['print']['#type'] = 'hidden';
-  $form['path']['#type'] = 'hidden';
-  $form['path']['#type'] = 'hidden';
-  $form['notifications']['#type'] = 'hidden';
+  $form['author']['#access'] = false;
+  $form['options']['#access'] = false;
+  $form['comment_settings']['#access'] = false;
+  $form['path']['#access'] = false;
+  $form['path_redirect']['#type'] = false;
+  $form['print']['#access'] = false;
+  $form['path']['#access'] = false;
+  $form['path']['#access'] = false;
+  $form['notifications']['#access'] = false;
 	
-	
+	$form['markup-start'] = array('#value' => '<div id="profilewizard-form">', '#weight' => -10);
+	$form['markup-end'] = array('#value' => '</div> <!-- #profilewizard-form -->', '#weight' => 1000);
 	// pass form step number
 	$form['profilewizard']['step'] = array(
 		'#type' => 'value',
@@ -265,7 +274,6 @@ function profilewizard_step_form($context, $node, $step) {
  * Implementation of step form submit
  */
 function profilewizard_step_form_submit($form, &$form_state) {
-
 	// redirect to home page if skip button clicked
 	if ($form_state['clicked_button']['#value'] == 'Skip Process') {
 		$form_state['redirect'] = '';
@@ -274,7 +282,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
 	$step = (int)$form_state['values']['step'];
   $node = node_load($form_state['values']['nid']);
   $form_id = $node->type.'_node_form';
-	// dpm($form_state['values']);
+	// dpm($form_state['values']['field_file']);
 	// dpm($node);
 	
   // $form_state_new = array();
@@ -295,15 +303,32 @@ function profilewizard_step_form_submit($form, &$form_state) {
 			if (strlen(strstr($field, 'group_')) > 0) {
 				foreach($form_state['values'][$field] as $delta => $group) {
 					// save individual values
-					if (is_numeric($delta) && !empty((array)$group))
-					foreach (array_keys((array)$group) as $field_name) {
+					if (is_numeric($delta) && !empty($group))
+					foreach (array_keys($group) as $field_name) {
 						// copy only legitemate fields
 						if ($field_name[0] != '_' && $field_name != null)
 							$node->{$field_name}[$delta]['value'] = $group[$field_name][$delta]['value'];
 					}
 				}
-			} else
-				$node->$field = $form_state['values'][$field];
+			} else {
+				// remove file fields
+				if ($form_state['values'][$field][0]['fid'] > 0) {
+					dpm($form_state['values'][$field][0]);
+					foreach($form_state['values'][$field] as $delta => &$file) {
+						// check if must be removed
+						if (array_key_exists('data', $file) && !$file['data']) {
+							$file = null;
+							$form_state['clicked_button']['#value'] = 'Refresh';
+						}
+						// check if new file is uploaded
+						elseif (array_key_exists('field', $file) && !empty($file['field'])) {
+							$form_state['clicked_button']['#value'] = 'Refresh';
+						}
+					}
+					$node->$field = $form_state['values'][$field];
+				}	else
+					$node->$field = $form_state['values'][$field];
+			}
 		}
 		node_save($node);
 	}
@@ -312,6 +337,8 @@ function profilewizard_step_form_submit($form, &$form_state) {
 		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/step/'.($step+1);
 	elseif ($form_state['clicked_button']['#value'] == 'Previous' && $step > 1)
 		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/step/'.($step-1);
-	// elseif ($step == variable_get('profilewizard_steps', null))
-		// $form_state['redirect'] = '';
+	elseif ($form_state['clicked_button']['#value'] == 'Refresh')
+		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/step/'.($step);
+	elseif ($step == variable_get('profilewizard_steps', null))
+		$form_state['redirect'] = '';
 }
