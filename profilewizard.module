@@ -103,7 +103,7 @@ function _profilewizard_block() {
 		if (module_exists('content_complete')) {
 			$complete = content_complete_get_data($node);
 			// only print link if profile not filled in
-			if ($complete['percent'] <= 20)
+			if ($complete['percent'] <= 40)
 				return l('Profile Wizard', 'node/'.$node->nid.'/profilewizard/step/1');
 			else
 				return;
@@ -282,7 +282,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
 	$step = (int)$form_state['values']['step'];
   $node = node_load($form_state['values']['nid']);
   $form_id = $node->type.'_node_form';
-	// dpm($form_state['values']['field_file']);
+	// dpm($form_state['values']);
 	// dpm($node);
 	
   // $form_state_new = array();
@@ -304,18 +304,21 @@ function profilewizard_step_form_submit($form, &$form_state) {
 				foreach($form_state['values'][$field] as $delta => $group) {
 					// save individual values
 					if (is_numeric($delta) && !empty($group))
-					foreach (array_keys($group) as $field_name) {
+					foreach (array_keys((array)$group) as $field_name) {
 						// copy only legitemate fields
-						if ($field_name[0] != '_' && $field_name != null)
+						if ($field_name[0] != '_' && $field_name != null && !empty($group[$field_name][$delta]['value']))
 							$node->{$field_name}[$delta]['value'] = $group[$field_name][$delta]['value'];
+						// non-delta fields like date fix
+						elseif (!empty($group[$field_name]['value'])) 
+							$node->{$field_name}[$delta]['value'] = $group[$field_name]['value'];
 					}
 				}
 			} else {
 				// remove file fields
 				if ($form_state['values'][$field][0]['fid'] > 0) {
-					dpm($form_state['values'][$field][0]);
 					foreach($form_state['values'][$field] as $delta => &$file) {
 						// check if must be removed
+						// if (module_exists('imagefield_crop))
 						if (array_key_exists('data', $file) && !$file['data']) {
 							$file = null;
 							$form_state['clicked_button']['#value'] = 'Refresh';
@@ -326,7 +329,9 @@ function profilewizard_step_form_submit($form, &$form_state) {
 						}
 					}
 					$node->$field = $form_state['values'][$field];
-				}	else
+				}
+				// Normal fields
+				else
 					$node->$field = $form_state['values'][$field];
 			}
 		}
