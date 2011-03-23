@@ -104,7 +104,7 @@ function _profilewizard_block() {
 			$complete = content_complete_get_data($node);
 			// only print link if profile not filled in
 			if ($complete['percent'] <= 40)
-				return l('Profile Wizard', 'node/'.$node->nid.'/profilewizard/step/1');
+				return l('Click here to start the Profile Wizard<span class="small">Complete the most crucial parts of your profile in just a few easy steps.</span>', 'node/'.$node->nid.'/profilewizard/step/1', array('html' => true, 'attributes' => array('class' => 'call-to-action')));
 			else
 				return;
 		}
