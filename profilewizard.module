@@ -345,5 +345,5 @@ function profilewizard_step_form_submit($form, &$form_state) {
 	elseif ($form_state['clicked_button']['#value'] == 'Refresh')
 		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/step/'.($step);
 	elseif ($step == variable_get('profilewizard_steps', null))
-		$form_state['redirect'] = '';
+		$form_state['redirect'] = 'user/'.$node->uid;
 }
