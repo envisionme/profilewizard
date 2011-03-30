@@ -195,7 +195,7 @@ function profilewizard_step_form($context, $node, $step) {
 	$form['buttons']['skip'] = array(
     '#type' => 'submit',
 		'#access' => 1,
-    '#value' => t('Skip Process'),
+    '#value' => t('Skip Wizard'),
     '#weight' => 11,
     '#submit' => array('profilewizard_step_form_submit')
 	);
