@@ -43,6 +43,7 @@
 	}
 
 /* Hide filefield ajax upload button */
-#profilewizard-form .form-item .filefield-upload .form-submit.ahah-processed {
+#profilewizard-form .form-item .filefield-upload .form-submit.ahah-processed,
+#profilewizard-form .form-item .widget-edit .form-submit.ahah-processed {
 	display: none;
 }
