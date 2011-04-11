@@ -99,7 +99,7 @@ function _profilewizard_block() {
 		return;
 	
 	// if not on the step process display link to 1st step page
-	if (user_access('use profile wizard') && arg(2) != 'profilewizard' && $node->type == $type) {
+	if (user_access('use profile wizard') && arg(2) != 'profilewizard' && $node->type == $type && $user->uid == $node->uid) {
 		if (module_exists('content_complete')) {
 			$complete = content_complete_get_data($node);
 			// only print link if profile not filled in
