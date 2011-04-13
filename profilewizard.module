@@ -275,8 +275,8 @@ function profilewizard_step_form($context, $node, $step) {
  */
 function profilewizard_step_form_submit($form, &$form_state) {
 	// redirect to home page if skip button clicked
-	if ($form_state['clicked_button']['#value'] == 'Skip Process') {
-		$form_state['redirect'] = '';
+	if ($form_state['clicked_button']['#value'] == 'Skip Wizard') {
+		$form_state['redirect'] = 'user';
 		return;
 	}
 	$step = (int)$form_state['values']['step'];
