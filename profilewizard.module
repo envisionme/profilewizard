@@ -341,6 +341,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
 			}
 		}
 		node_save($node);
+    drupal_set_message(t('All @step information saved successfully.', array('@step' => $profilewizard_step_data[$step]['label'])));
 	}
   // drupal_flush_all_caches();
 	if (($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish') && $step < $profilewizard_steps)
