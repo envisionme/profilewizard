@@ -1,6 +1,4 @@
 <?php
-// $Id$
-
 /**
  * Implementation of hook_install().
  */
@@ -13,16 +11,5 @@ function profilewizard_install() {
  */
 function profilewizard_uninstall() {
 	variable_del('profilewizard_type');
-  variable_del('profilewizard_steps');
-  variable_del('profilewizard_fields');
-	// clear all step data
-  for($i = 1; $i <= 5; $i++) {
-		variable_del('profilewizard_label_step'.$i);
-		variable_del('profilewizard_fields_step'.$i);
-	}
-  /*foreach (node_get_types('names') as $type => $type_name) {
-    variable_del('ant_'. $type);
-    variable_del('ant_pattern_'. $type);
-    variable_del('ant_php_'. $type);
-  }/**/
+  variable_del('profilewizard_step_data');
 }

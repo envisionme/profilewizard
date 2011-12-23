@@ -1,5 +1,4 @@
 <?php
-// $Id$
 /**
  * @file
  * Custom module to handle a profile wizard for simplifying the signup process for users
@@ -34,6 +33,10 @@ function profilewizard_menu() {
     'access arguments' => array('administer profile wizard'),
     'file' => 'profilewizard.admin.inc',
   );
+  $items['admin/settings/profilewizard/config'] = array(
+    'title' => 'Configure',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
 	$items['node/%/profilewizard/step/%'] = array(
     'title' => 'Profile Wizard',
     'page callback' => 'profilewizard_wizard',
@@ -42,6 +45,18 @@ function profilewizard_menu() {
     'access arguments' => array(1),
     'type' => MENU_CALLBACK,
   );
+  // get all content types
+  foreach (content_profile_get_types() as $type) {
+    $items['admin/settings/profilewizard/' . $type->type] = array(
+      'title' => $type->name . ' Wizard',
+      'description' => 'Profilewizard settings for ' . $type->name . '.',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('profilewizard_settings_form'),
+      'access arguments' => array('administer profile wizard'),
+      'file' => 'profilewizard.admin.inc',
+      'type' => MENU_LOCAL_TASK,
+    );
+  }
   return $items;
 }
 
@@ -136,16 +151,16 @@ function _profilewizard_block() {
  */
 function profilewizard_wizard($nid, $step) {
   $output = '';
-  $profilewizard_type = variable_get('profilewizard_type', null);
+  $node = node_load($nid);
+  $profilewizard_type = $node->type;
   $profilewizard_step_data = variable_get('profilewizard_step_data', array());
 
-	$node = node_load($nid);
   // redirect if not the chosen wizard type
   if ($node->type != $profilewizard_type) {
     drupal_not_found();
 		exit();
 	}
-	drupal_set_title($profilewizard_step_data[$step]['label']);
+	drupal_set_title($profilewizard_step_data[$profilewizard_type][$step]['label']);
   $output .= drupal_get_form('profilewizard_step_form', $node, $step);
   return $output;
 }
@@ -154,12 +169,12 @@ function profilewizard_wizard($nid, $step) {
  * Implementation of step form
  */
 function profilewizard_step_form($context, $node, $step) {
-  $profilewizard_type = variable_get('profilewizard_type', null);
-  $profilewizard_steps = variable_get('profilewizard_steps', 0);
+  $profilewizard_type = $node->type;
   $profilewizard_step_data = variable_get('profilewizard_step_data', array());
+  $profilewizard_steps = count($profilewizard_step_data[$profilewizard_type]);
   $form_id = $node->type.'_node_form';
   $form_state = array();
-  $fields = $profilewizard_step_data[$step]['fields'];
+  $fields = $profilewizard_step_data[$profilewizard_type][$step]['fields'];
 	
   // clean list of fields to show
   foreach($fields as $key => $field) {
@@ -279,10 +294,11 @@ function profilewizard_step_form($context, $node, $step) {
  * Implementation of step form submit
  */
 function profilewizard_step_form_submit($form, &$form_state) {
-  $profilewizard_steps = variable_get('profilewizard_steps', 0);
+  $profilewizard_type = $form_state['values']['type'];
   $profilewizard_step_data = variable_get('profilewizard_step_data', array());
+  $profilewizard_steps = count($profilewizard_step_data[$profilewizard_type]);
   $step = (int)$form_state['values']['step'];
-  $fields = $profilewizard_step_data[$step]['fields'];
+  $fields = $profilewizard_step_data[$profilewizard_type][$step]['fields'];
 
   // redirect to home page if skip button clicked
   if ($form_state['clicked_button']['#value'] == 'Skip Wizard') {
@@ -341,7 +357,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
 			}
 		}
 		node_save($node);
-    drupal_set_message(t('All @step information saved successfully.', array('@step' => $profilewizard_step_data[$step]['label'])));
+    drupal_set_message(t('All @step information saved successfully.', array('@step' => $profilewizard_step_data[$profilewizard_type][$step]['label'])));
 	}
   // drupal_flush_all_caches();
 	if (($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish') && $step < $profilewizard_steps)

@@ -11,33 +11,34 @@
  */ 
 function profilewizard_settings_form() {
   $form = array();
-  $profilewizard_type = variable_get('profilewizard_type', null);
-  $profilewizard_steps = variable_get('profilewizard_steps', 0);
+  $profilewizard_type = arg(3);
   $profilewizard_step_data = variable_get('profilewizard_step_data', array());
 
-  // get all content types
-  $types = array(0 => 'none');
-  foreach (content_profile_get_types() as  $type) {
-    $types[$type->type] = $type->name;
+  if (empty($profilewizard_type)) {
+    $content_profile_types = content_profile_get_types();
+
+    //Error message if no content profile types detected.
+    if (sizeof($content_profile_types) <= 0) {
+      drupal_set_message('You don\'t currently have any content profiles selected. Please select a content profile type to continue.', 'error');
+      return $form;
+    }
+
+    // Print links to profile wizard settings pages.
+    $links = array();
+    foreach ($content_profile_types as $type => $obj) {
+      $links[] = l($obj->name, 'admin/settings/profilewizard/' . $type);
+    }
+    $content = 'Please configure one of the following profile wizard types:';
+
+    $form['markup'] = array(
+      '#value' => $content . theme('item_list', $links),
+    );
+    return $form;
   }
-	// return if no content profile type specified
-	if (count($types) <= 1) {
-		$form['error'] = array('#value' => 'No content profile types detected. Please mark a content type as a content profile first.');
-		return $form;
-	}
   $form['profilewizard_type'] = array(
-    '#type' => 'select',
-    '#title' => t('Content-type for wizard'),
-    '#default_value' => $profilewizard_type,
-    '#options' => $types,
-    '#description' => t('Content type to be used for the wizard process'),
+    '#type' => 'value',
+    '#value' => $profilewizard_type,
   );
-
-	// If no content-type selected, return basic form.
-  if ($profilewizard_type == null) {
-		return system_settings_form($form);
-  }
-
   // get all type fields
   $fields = array();
   $type_info = content_types($profilewizard_type);
@@ -71,30 +72,24 @@ function profilewizard_settings_form() {
   // sorting field list
   asort($fields);
 
-  if (sizeof($fields) > 0)
-  $form['profilewizard_steps'] = array(
-    '#type' => 'select',
-    '#title' => t('Amount of steps needed'),
-    '#default_value' => $profilewizard_steps,
-    '#options' => array(1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 6,
-      7 => 7),
-    '#description' => t('Amount of steps to be used for wizard'),
+  $form['profilewizard_step_data'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Steps'),
+    '#collapsible' => FALSE,
+    '#collapsed' => FALSE,
   );
 
-  if (sizeof($fields) > 0 && $profilewizard_steps > 0) {
-    $form['profilewizard_step_data'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Steps'),
-      '#collapsible' => FALSE,
-      '#collapsed' => FALSE,
-    );
-
-    $delta = 1;
-    for ($delta = 1; $delta <= $profilewizard_steps; $delta++) {
-      $form['profilewizard_step_data'][$delta] = _profilewizard_form_combo($delta, $profilewizard_step_data[$delta]['label'], $profilewizard_step_data[$delta]['fields'], $fields);
-    }
+  // Render step form elements.
+  foreach ($profilewizard_step_data[$profilewizard_type] as $delta => $step) {
+    $form['profilewizard_step_data'][$profilewizard_type][$delta] = _profilewizard_form_combo($profilewizard_type, $delta, $profilewizard_step_data[$profilewizard_type][$delta]['label'], $profilewizard_step_data[$profilewizard_type][$delta]['fields'], $fields);
   }
 
+  //  Add another button
+  $form['profilewizard_step_data']['add_step'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add a step'),
+    '#submit' => array('profilewizard_settings_add_step'),
+  );
   // Use custom submit handler.
   $form['buttons']['submit'] = array(
     '#type' => 'submit',
@@ -106,17 +101,38 @@ function profilewizard_settings_form() {
 }
 
 /**
+ * Submit handler for add another step functionality.
+ */
+function profilewizard_settings_add_step($form, &$form_state) {
+  $type = $form_state['values']['profilewizard_type'];
+  $profilewizard_step_data = variable_get('profilewizard_step_data', array());
+  if (!empty($profilewizard_step_data[$type]))
+    $profilewizard_step_data[$type][] = array('label' => '', 'fields' => array());
+  else
+    $profilewizard_step_data[$type][1] = array('label' => '', 'fields' => array());
+  variable_set('profilewizard_step_data', $profilewizard_step_data);
+  drupal_set_message(t('New wizard step added.'));
+}
+
+/**
  * Submit handler for settings form.
  */
 function profilewizard_settings_form_submit($form, &$form_state) {
-  variable_set('profilewizard_type', $form_state['values']['profilewizard_type']);
-  variable_set('profilewizard_steps', $form_state['values']['profilewizard_steps']);
+  $type = $form_state['values']['profilewizard_type'];
   $profilewizard_step_data = $form_state['values']['profilewizard_step_data'];
-  /*foreach ($profilewizard_step_data as $delta => $step) {
+  foreach ($profilewizard_step_data[$type] as $delta => $step) {
     if (empty($step['label'])) {
-      unset($profilewizard_step_data[$key]);
+      unset($profilewizard_step_data[$type][$delta]);
     }
-  }*/
+  }
+  // Reset correct step keys for ease of use.
+  $var = array();
+  $i = 1;
+  foreach ($profilewizard_step_data[$form_state['values']['profilewizard_type']] as $step) {
+    $var[$form_state['values']['profilewizard_type']][$i] = $step;
+    $i++;
+  }
+  $profilewizard_step_data = $var;
   variable_set('profilewizard_step_data', $profilewizard_step_data);
   drupal_set_message(t('Your changes have been saved.'));
 }
@@ -124,7 +140,7 @@ function profilewizard_settings_form_submit($form, &$form_state) {
 /**
  * Profilewizard combo boxes for admin settings form.
  */
-function _profilewizard_form_combo($delta, $label, $fields, $all_fields) {
+function _profilewizard_form_combo($type, $delta, $label, $fields, $all_fields) {
   $form = array(
     '#tree' => TRUE,
   );
@@ -133,14 +149,14 @@ function _profilewizard_form_combo($delta, $label, $fields, $all_fields) {
     '#title' => t('Step ' . $delta),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
-    '#parents' => array('profilewizard_step_data', $delta),
+    '#parents' => array('profilewizard_step_data', $type, $delta),
   );
   $form[$delta]['label'] = array(
     '#type' => 'textfield',
     '#title' => t('Step Label'),
     '#default_value' => $label,
     '#description' => t('Label name of the step'),
-    '#parents' => array('profilewizard_step_data', $delta, 'label'),
+    '#parents' => array('profilewizard_step_data', $type, $delta, 'label'),
   );
   $form[$delta]['fields'] = array(
     '#type' => 'checkboxes',
@@ -148,7 +164,7 @@ function _profilewizard_form_combo($delta, $label, $fields, $all_fields) {
     '#default_value' => $fields,
     '#options' => $all_fields,
     '#description' => t('Fields to use for the profile wizard'),
-    '#parents' => array('profilewizard_step_data', $delta, 'fields'),
+    '#parents' => array('profilewizard_step_data', $type, $delta, 'fields'),
   );
   return $form;
 }
