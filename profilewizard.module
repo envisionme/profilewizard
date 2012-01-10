@@ -202,7 +202,7 @@ function profilewizard_step_form($context, $node, $step) {
 	$form['buttons']['next'] = array(
     '#type' => 'submit',
 		'#access' => 1,
-    '#value' => $step == $profilewizard_steps?t('Finish'):t('Next'),
+    '#value' => $step == $profilewizard_steps?t('Finish'):t('Save & Continue'),
     '#weight' => 10,
     '#submit' => array('profilewizard_step_form_submit')
 	);
@@ -312,7 +312,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
   // $values['op'] = t('Save');
   // $form_state['node'] = (array)$node;
 	
-  if ($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish') {
+  if ($form_state['clicked_button']['#value'] == 'Save & Continue' || $form_state['clicked_button']['#value'] == 'Finish') {
 		// drupal_execute($form_id, $form_state, (object)$node);
 		foreach($fields as $field) {
 			// check if it's a multigroup and handle accordingly
@@ -355,7 +355,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
     drupal_set_message(t('All @step information saved successfully.', array('@step' => $profilewizard_step_data[$profilewizard_type][$step]['label'])));
 	}
   // drupal_flush_all_caches();
-	if (($form_state['clicked_button']['#value'] == 'Next' || $form_state['clicked_button']['#value'] == 'Finish') && $step < $profilewizard_steps)
+	if (($form_state['clicked_button']['#value'] == 'Save & Continue' || $form_state['clicked_button']['#value'] == 'Finish') && $step < $profilewizard_steps)
 		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/step/'.($step+1);
 	elseif ($form_state['clicked_button']['#value'] == 'Previous' && $step > 1)
 		$form_state['redirect'] = 'node/'.$node->nid.'/profilewizard/step/'.($step-1);
