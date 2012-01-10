@@ -119,20 +119,22 @@ function profilewizard_settings_add_step($form, &$form_state) {
  */
 function profilewizard_settings_form_submit($form, &$form_state) {
   $type = $form_state['values']['profilewizard_type'];
-  $profilewizard_step_data = $form_state['values']['profilewizard_step_data'];
-  foreach ($profilewizard_step_data[$type] as $delta => $step) {
+  $profilewizard_step_data = variable_get('profilewizard_step_data', array());
+  $profilewizard_step_data_new = $form_state['values']['profilewizard_step_data'];
+  foreach ($profilewizard_step_data_new[$type] as $delta => $step) {
     if (empty($step['label'])) {
-      unset($profilewizard_step_data[$type][$delta]);
+      unset($profilewizard_step_data_new[$type][$delta]);
     }
   }
   // Reset correct step keys for ease of use.
   $var = array();
   $i = 1;
-  foreach ($profilewizard_step_data[$form_state['values']['profilewizard_type']] as $step) {
-    $var[$form_state['values']['profilewizard_type']][$i] = $step;
+  foreach ($profilewizard_step_data_new[$form_state['values']['profilewizard_type']] as $step) {
+    $var[$i] = $step;
     $i++;
   }
-  $profilewizard_step_data = $var;
+  // Save steps for current type without loosing other type data.
+  $profilewizard_step_data[$type] = $var;
   variable_set('profilewizard_step_data', $profilewizard_step_data);
   drupal_set_message(t('Your changes have been saved.'));
 }
