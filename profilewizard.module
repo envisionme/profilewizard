@@ -151,7 +151,7 @@ function profilewizard_wizard($nid, $step) {
   $profilewizard_step_data = variable_get('profilewizard_step_data', array());
 
   // redirect if not the chosen wizard type
-  if ($node->type != $profilewizard_type) {
+  if (empty($profilewizard_step_data[$profilewizard_type])) {
     drupal_not_found();
 		exit();
 	}
