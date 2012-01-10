@@ -141,12 +141,25 @@ function profilewizard_settings_form_submit($form, &$form_state) {
  * Profilewizard combo boxes for admin settings form.
  */
 function _profilewizard_form_combo($type, $delta, $label, $fields, $all_fields) {
+  // Print step labels as for better readability.
+  if (!empty($label)) {
+    $step_label = t('Step @step - @label', array(
+      '@step' => $delta,
+      '@label' => $label
+    ));
+  } else {
+    $step_label = t('Step @step', array(
+      '@step' => $delta
+    ));
+  }
+
+  // Render step fieldgroup.
   $form = array(
     '#tree' => TRUE,
   );
   $form[$delta] = array(
     '#type' => 'fieldset',
-    '#title' => t('Step ' . $delta),
+    '#title' => $step_label,
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#parents' => array('profilewizard_step_data', $type, $delta),
