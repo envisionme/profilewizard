@@ -352,7 +352,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
 			}
 		}
 		node_save($node);
-    drupal_set_message(t('All @step information saved successfully.', array('@step' => $profilewizard_step_data[$profilewizard_type][$step]['label'])));
+    drupal_set_message(t('All %step_name information saved successfully.', array('%step_name' => $profilewizard_step_data[$profilewizard_type][$step]['label'])));
 	}
   // drupal_flush_all_caches();
 	if (($form_state['clicked_button']['#value'] == 'Save & Continue' || $form_state['clicked_button']['#value'] == 'Finish') && $step < $profilewizard_steps)
