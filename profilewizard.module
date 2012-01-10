@@ -101,20 +101,18 @@ function profilewizard_block($op='list', $delta=0, $edit=array()) {
  */
 function _profilewizard_block() {
   global $user;
-  $profilewizard_type = variable_get('profilewizard_type', null);
-  $profilewizard_steps = variable_get('profilewizard_steps', 0);
+  // load node
+
+  if (arg(0) == 'node' && is_numeric(arg(1)))
+    $node = node_load(arg(1));
+  elseif (arg(0) == 'user' && is_numeric(arg(1))) {
+    $node = content_profile_load('uprofile', arg(1));
+  } else
+    return '';
+
   $profilewizard_step_data = variable_get('profilewizard_step_data', array());
-	
-	// load node
-	if (arg(0) == 'node' && is_numeric(arg(1)))
-		$node = node_load(arg(1));
-	elseif (arg(0) == 'user' && is_numeric(arg(1))) {
-		$node = content_profile_load('uprofile', arg(1));
-	} else
-		return '';
-	
-	// if not on the step process display link to 1st step page
-	if (user_access('use profile wizard') && arg(2) != 'profilewizard' && $node->type == $profilewizard_type && $user->uid == $node->uid) {
+  // if not on the step process display link to 1st step page
+	if (user_access('use profile wizard') && arg(2) != 'profilewizard' && !empty($profilewizard_step_data[$node->type]) && $user->uid == $node->uid) {
 		if (module_exists('content_complete')) {
 			$complete = content_complete_get_data($node);
 			// only print link if profile not filled in
@@ -123,20 +121,17 @@ function _profilewizard_block() {
 			else
 				return '';
 		}
-  } elseif (user_access('use profile wizard') && arg(2) == 'profilewizard' && $node->type == $profilewizard_type) {
+  } elseif (user_access('use profile wizard') && arg(2) == 'profilewizard' && !empty($profilewizard_step_data[$node->type])) {
 
 		// add stylesheet
 		drupal_add_css(drupal_get_path('module', 'profilewizard') . '/profilewizard.css');
 		
-		// $node = node_load((int)arg(1));
-		$step = (int)arg(3);
-
 		$step_list = array();
-		if ($profilewizard_type == $node->type)
+		if (!empty($profilewizard_step_data[$node->type]))
 		// iterate through all steps and print label links
-		for($i = 1; $i <= $profilewizard_steps; $i++) {
-			$label = $profilewizard_step_data[$step]['label'];
-			$step_list[] = l($label == null?'Step ' . $i:'<span class="step">' . $i . '</span> ' . $label, 'node/' . $node->nid . '/profilewizard/step/' . $i, array('html' => true));
+		foreach ($profilewizard_step_data[$node->type] as $step => $step_data) {
+			$label = $step_data['label'];
+			$step_list[] = l($label == null?'Step ' . $step:'<span class="step">' . $step . '</span> ' . $label, 'node/' . $node->nid . '/profilewizard/step/' . $step, array('html' => true));
 		}
 		$output = theme_item_list($step_list, null, 'ul');
 		return $output;
