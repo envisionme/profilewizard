@@ -103,11 +103,15 @@ function _profilewizard_block() {
   global $user;
   // load node
 
-  if (arg(0) == 'node' && is_numeric(arg(1)))
+  if (arg(0) == 'node' && is_numeric(arg(1)) && njs_is_applicant($user->uid))
     $node = node_load(arg(1));
-  elseif (arg(0) == 'user' && is_numeric(arg(1))) {
+  elseif (arg(0) == 'user' && is_numeric(arg(1)) && njs_is_applicant($user->uid)) {
     $node = content_profile_load('uprofile', arg(1));
-  } else
+  } 
+  elseif ( njs_is_company($user->uid) ) {
+  	$node = content_profile_load('company', arg(1));
+  }
+  else
     return '';
 
   $profilewizard_step_data = variable_get('profilewizard_step_data', array());
@@ -150,6 +154,8 @@ function profilewizard_wizard($nid, $step) {
   $profilewizard_type = $node->type;
   $profilewizard_step_data = variable_get('profilewizard_step_data', array());
 
+  //dpm($profilewizard_step_data);
+
   // redirect if not the chosen wizard type
   if (empty($profilewizard_step_data[$profilewizard_type])) {
     drupal_not_found();
@@ -176,7 +182,7 @@ function profilewizard_step_form($context, $node, $step) {
      if ($field == null)
       unset($fields[$key]);
   }
-  
+
   module_load_include('inc', 'node', 'node.pages'); 
   if (module_exists('filefield'))
 		module_load_include('inc', 'filefield', 'filefield_widget');
@@ -189,6 +195,8 @@ function profilewizard_step_form($context, $node, $step) {
   unset($form['buttons']['delete']);
 	unset($form['buttons']['submit']);
 	unset($form['buttons']);
+
+	
 	
 	// print submit buttons
 	if ($step > 1)
@@ -213,6 +221,7 @@ function profilewizard_step_form($context, $node, $step) {
     '#weight' => 11,
     '#submit' => array('profilewizard_step_form_submit')
 	);
+	//dpm($form);
 	
   drupal_prepare_form($form_id, $form, $form_state);
   // save all file field prepare data because they conflict after form processing
@@ -237,8 +246,11 @@ function profilewizard_step_form($context, $node, $step) {
 				$form[$field] = $form[$groups[$field]['parent']][$field];
 		}
   }  
+
+  //dpm($form);
+  //---**
   drupal_process_form($form_id, $form, $form_state);
-  
+
   // restore all filefield prepare data because of conflict
 	foreach($fields as $field) {
 		// Update the cached form with the new element at the right place in the form.
@@ -246,7 +258,7 @@ function profilewizard_step_form($context, $node, $step) {
 			$form[$field] = $prepare_fields[$field];
 		}
   }
-	
+	//dpm($form);
 	$field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id', '#multigroups');
   // hide unwanted fields
 	foreach($form as $key => $field) {
@@ -263,7 +275,7 @@ function profilewizard_step_form($context, $node, $step) {
 			}
 		}
 	}
-  
+  //---**
 	// hide defaults
   $form['author']['#access'] = false;
   $form['options']['#access'] = false;
@@ -282,6 +294,7 @@ function profilewizard_step_form($context, $node, $step) {
 		'#type' => 'value',
 		'#value' => $step,
 	);
+	//dpm($form);
 	return $form;
 }
 
