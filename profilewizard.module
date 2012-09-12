@@ -154,8 +154,6 @@ function profilewizard_wizard($nid, $step) {
   $profilewizard_type = $node->type;
   $profilewizard_step_data = variable_get('profilewizard_step_data', array());
 
-  //dpm($profilewizard_step_data);
-
   // redirect if not the chosen wizard type
   if (empty($profilewizard_step_data[$profilewizard_type])) {
     drupal_not_found();
@@ -221,7 +219,6 @@ function profilewizard_step_form($context, $node, $step) {
     '#weight' => 11,
     '#submit' => array('profilewizard_step_form_submit')
 	);
-	//dpm($form);
 	
   drupal_prepare_form($form_id, $form, $form_state);
   // save all file field prepare data because they conflict after form processing
@@ -247,8 +244,6 @@ function profilewizard_step_form($context, $node, $step) {
 		}
   }  
 
-  //dpm($form);
-  //---**
   drupal_process_form($form_id, $form, $form_state);
 
   // restore all filefield prepare data because of conflict
@@ -258,7 +253,7 @@ function profilewizard_step_form($context, $node, $step) {
 			$form[$field] = $prepare_fields[$field];
 		}
   }
-	//dpm($form);
+	
 	$field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id', '#multigroups');
   // hide unwanted fields
 	foreach($form as $key => $field) {
@@ -275,7 +270,7 @@ function profilewizard_step_form($context, $node, $step) {
 			}
 		}
 	}
-  //---**
+  
 	// hide defaults
   $form['author']['#access'] = false;
   $form['options']['#access'] = false;
@@ -294,7 +289,7 @@ function profilewizard_step_form($context, $node, $step) {
 		'#type' => 'value',
 		'#value' => $step,
 	);
-	//dpm($form);
+	
 	return $form;
 }
 
@@ -314,8 +309,6 @@ function profilewizard_step_form_submit($form, &$form_state) {
     return;
   }
   $node = node_load($form_state['values']['nid']);
-	// dpm($form_state['values']);
-	// dpm($node);
 	
   // $form_state_new = array();
 	module_load_include('inc', 'node', 'node.pages');
