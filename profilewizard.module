@@ -120,7 +120,7 @@ function _profilewizard_block() {
 		if (module_exists('content_complete')) {
 			$complete = content_complete_get_data($node);
 			// only print link if profile not filled in
-			if ($complete['percent'] <= 40)
+			if ( ($complete['percent'] <= 40 && $node->type == 'uprofile') || ($complete['percent'] <= 45 && $node->type == 'company') )
 				return l('Click here to start the Profile Wizard<span class="small">Complete the most crucial parts of your profile in just a few easy steps.</span>', 'node/'.$node->nid.'/profilewizard/step/1', array('html' => true, 'attributes' => array('class' => 'call-to-action')));
 			else
 				return '';
