@@ -3,7 +3,7 @@
  * @file
  * Custom module to handle a profile wizard for simplifying the signup process for users
  */
- 
+
 /**
  * Implementation of hook_help()
  */
@@ -101,45 +101,48 @@ function profilewizard_block($op='list', $delta=0, $edit=array()) {
  */
 function _profilewizard_block() {
   global $user;
-  // load node
-
-  if (arg(0) == 'node' && is_numeric(arg(1)) && njs_is_applicant($user->uid))
+  // Load node for wizard.
+  if (arg(0) == 'node' && is_numeric(arg(1)) && arg(2) == 'profilewizard') {
     $node = node_load(arg(1));
-  elseif (arg(0) == 'user' && is_numeric(arg(1)) && njs_is_applicant($user->uid)) {
-    $node = content_profile_load('uprofile', arg(1));
-  } 
-  elseif ( njs_is_company($user->uid) ) {
-  	$node = content_profile_load('company', arg(1));
   }
-  else
-    return '';
+  else {
+    $node = get_user_profile(get_uid_from_url());
+  }
 
-  $profilewizard_step_data = variable_get('profilewizard_step_data', array());
-  // if not on the step process display link to 1st step page
-	if (user_access('use profile wizard') && arg(2) != 'profilewizard' && !empty($profilewizard_step_data[$node->type]) && $user->uid == $node->uid) {
-		if (module_exists('content_complete')) {
-			$complete = content_complete_get_data($node);
-			// only print link if profile not filled in
-			if ( ($complete['percent'] <= 40 && $node->type == 'uprofile') || ($complete['percent'] <= 45 && $node->type == 'company') )
-				return l('Click here to start the Profile Wizard<span class="small">Complete the most crucial parts of your profile in just a few easy steps.</span>', 'node/'.$node->nid.'/profilewizard/step/1', array('html' => true, 'attributes' => array('class' => 'call-to-action')));
-			else
-				return '';
-		}
-  } elseif (user_access('use profile wizard') && arg(2) == 'profilewizard' && !empty($profilewizard_step_data[$node->type])) {
+  // Only display for admins and user self.
+  //  && ($user->uid == 1 || in_array(ADMIN_ROLE, array_values($user->roles) || $user->uid == $node->uid)
+  if (is_object($node)) {
+    $profilewizard_step_data = variable_get('profilewizard_step_data', array());
+    // if not on the step process display link to 1st step page
+    if (user_access('use profile wizard') && arg(2) != 'profilewizard' && !empty($profilewizard_step_data[$node->type])) {
+  		if (module_exists('content_complete')) {
+  			$complete = content_complete_get_data($node);
+  			// only print link if profile not filled in
+  			if (($complete['percent'] <= 40 && $node->type == 'uprofile') || ($complete['percent'] <= 40 && $node->type == 'company'))
+  				return l('Click here to start the Profile Wizard.<br/>Complete the most crucial parts of your profile in just a few easy steps.', 'node/' . $node->nid . '/profilewizard/step/1', array('html' => true, 'attributes' => array('class' => 'call-to-action')));
+  			else
+  				return '';
+  		}
+    }
+    elseif (user_access('use profile wizard') &&
+      (arg(0) == 'node' && is_numeric(arg(1)) && arg(2) == 'profilewizard') &&
+      !empty($profilewizard_step_data[$node->type]) &&
+      (user_access('administer profile wizard') || $user->uid == $node->uid)) {
 
-		// add stylesheet
-		drupal_add_css(drupal_get_path('module', 'profilewizard') . '/profilewizard.css');
-		
-		$step_list = array();
-		if (!empty($profilewizard_step_data[$node->type]))
-		// iterate through all steps and print label links
-		foreach ($profilewizard_step_data[$node->type] as $step => $step_data) {
-			$label = $step_data['label'];
-			$step_list[] = l($label == null?'Step ' . $step:'<span class="step">' . $step . '</span> ' . $label, 'node/' . $node->nid . '/profilewizard/step/' . $step, array('html' => true));
-		}
-		$output = theme_item_list($step_list, null, 'ul');
-		return $output;
-	}
+  		// add stylesheet
+  		drupal_add_css(drupal_get_path('module', 'profilewizard') . '/profilewizard.css');
+
+  		$step_list = array();
+  		if (!empty($profilewizard_step_data[$node->type]))
+  		// iterate through all steps and print label links
+  		foreach ($profilewizard_step_data[$node->type] as $step => $step_data) {
+  			$label = $step_data['label'];
+  			$step_list[] = l($label == null?'Step ' . $step:'<span class="step">' . $step . '</span> ' . $label, 'node/' . $node->nid . '/profilewizard/step/' . $step, array('html' => true));
+  		}
+  		$output = theme_item_list($step_list, null, 'ul');
+  		return $output;
+  	}
+  }
 }
 
 /**
@@ -174,14 +177,14 @@ function profilewizard_step_form($context, $node, $step) {
   $form_id = $node->type.'_node_form';
   $form_state = array();
   $fields = $profilewizard_step_data[$profilewizard_type][$step]['fields'];
-	
+
   // clean list of fields to show
   foreach($fields as $key => $field) {
      if ($field == null)
       unset($fields[$key]);
   }
 
-  module_load_include('inc', 'node', 'node.pages'); 
+  module_load_include('inc', 'node', 'node.pages');
   if (module_exists('filefield'))
 		module_load_include('inc', 'filefield', 'filefield_widget');
   if (module_exists('imagefield'))
@@ -194,8 +197,8 @@ function profilewizard_step_form($context, $node, $step) {
 	unset($form['buttons']['submit']);
 	unset($form['buttons']);
 
-	
-	
+
+
 	// print submit buttons
 	if ($step > 1)
 	$form['buttons']['prev'] = array(
@@ -219,7 +222,7 @@ function profilewizard_step_form($context, $node, $step) {
     '#weight' => 11,
     '#submit' => array('profilewizard_step_form_submit')
 	);
-	
+
   drupal_prepare_form($form_id, $form, $form_state);
   // save all file field prepare data because they conflict after form processing
   $prepare_fields = array();
@@ -234,7 +237,7 @@ function profilewizard_step_form($context, $node, $step) {
 		// if in a normal fieldset
 		if (!empty($group_name)) {
 			$prepare_fields[$field] = $form[$group_name][$field];
-		} 
+		}
 		// if a normal field (not multigroup)
 		elseif (strlen(strstr($field, 'group_')) == 0) {
 			$prepare_fields[$field] = $form[$field];
@@ -242,7 +245,7 @@ function profilewizard_step_form($context, $node, $step) {
 			if (!empty($groups[$field]['parent']))
 				$form[$field] = $form[$groups[$field]['parent']][$field];
 		}
-  }  
+  }
 
   drupal_process_form($form_id, $form, $form_state);
 
@@ -253,12 +256,12 @@ function profilewizard_step_form($context, $node, $step) {
 			$form[$field] = $prepare_fields[$field];
 		}
   }
-	
+
 	$field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id', '#multigroups');
   // hide unwanted fields
 	foreach($form as $key => $field) {
 		if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
-			
+
 			// preserve fieldset hierarchy by hiding fieldsets
 			if ($field['#type'] == 'fieldset') {
 				$form[$key]['#access'] = false;
@@ -270,7 +273,7 @@ function profilewizard_step_form($context, $node, $step) {
 			}
 		}
 	}
-  
+
 	// hide defaults
   $form['author']['#access'] = false;
   $form['options']['#access'] = false;
@@ -281,7 +284,7 @@ function profilewizard_step_form($context, $node, $step) {
   $form['path']['#access'] = false;
   $form['path']['#access'] = false;
   $form['notifications']['#access'] = false;
-	
+
 	$form['markup-start'] = array('#value' => '<div id="profilewizard-form">', '#weight' => -10);
 	$form['markup-end'] = array('#value' => '</div> <!-- #profilewizard-form -->', '#weight' => 1000);
 	// pass form step number
@@ -289,7 +292,7 @@ function profilewizard_step_form($context, $node, $step) {
 		'#type' => 'value',
 		'#value' => $step,
 	);
-	
+
 	return $form;
 }
 
@@ -309,7 +312,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
     return;
   }
   $node = node_load($form_state['values']['nid']);
-	
+
   // $form_state_new = array();
 	module_load_include('inc', 'node', 'node.pages');
 	module_load_include('inc', 'filefield', 'filefield_widget');
@@ -317,7 +320,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
   module_load_include('inc', 'content', 'includes/content.crud');
   // $values['op'] = t('Save');
   // $form_state['node'] = (array)$node;
-	
+
   if ($form_state['clicked_button']['#value'] == 'Save & Continue' || $form_state['clicked_button']['#value'] == 'Finish') {
 		// drupal_execute($form_id, $form_state, (object)$node);
 		foreach($fields as $field) {
@@ -331,7 +334,7 @@ function profilewizard_step_form_submit($form, &$form_state) {
 						if ($field_name[0] != '_' && $field_name != null && !empty($group[$field_name][$delta]['value']))
 							$node->{$field_name}[$delta]['value'] = $group[$field_name][$delta]['value'];
 						// non-delta fields like date fix
-						elseif (!empty($group[$field_name]['value'])) 
+						elseif (!empty($group[$field_name]['value']))
 							$node->{$field_name}[$delta]['value'] = $group[$field_name]['value'];
 					}
 				}
