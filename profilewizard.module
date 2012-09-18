@@ -176,6 +176,9 @@ function profilewizard_step_form($context, $node, $step) {
   $profilewizard_steps = count($profilewizard_step_data[$profilewizard_type]);
   $form_id = $node->type.'_node_form';
   $form_state = array();
+  $form_state['build_info']['base_form_id'] = 'node_form';
+  $form_state['rebuild'] = TRUE;
+
   $fields = $profilewizard_step_data[$profilewizard_type][$step]['fields'];
 
   // clean list of fields to show
@@ -185,96 +188,98 @@ function profilewizard_step_form($context, $node, $step) {
   }
 
   module_load_include('inc', 'node', 'node.pages');
-  if (module_exists('filefield'))
+  /*if (module_exists('filefield'))
 		module_load_include('inc', 'filefield', 'filefield_widget');
+    drupal_add_js(drupal_get_path('module', 'filefield') .'/filefield.js');
   if (module_exists('imagefield'))
-		module_load_include('inc', 'imagefield', 'imagefield_widget');
+    module_load_include('inc', 'imagefield', 'imagefield_widget');/**/
 
   // Initialize settings:
   $form = drupal_retrieve_form($form_id, $form_state, $node);
   unset($form['buttons']['preview']);
   unset($form['buttons']['delete']);
-	unset($form['buttons']['submit']);
-	unset($form['buttons']);
+  unset($form['buttons']['submit']);
+  unset($form['buttons']);
 
 
 
-	// print submit buttons
-	if ($step > 1)
-	$form['buttons']['prev'] = array(
+  // print submit buttons
+  if ($step > 1)
+  $form['buttons']['prev'] = array(
     '#type' => 'submit',
-		'#access' => 1,
+    '#access' => 1,
     '#value' => t('Previous'),
     '#weight' => 9,
     '#submit' => array('profilewizard_step_form_submit')
-	);
-	$form['buttons']['next'] = array(
+  );
+  $form['buttons']['next'] = array(
     '#type' => 'submit',
-		'#access' => 1,
+    '#access' => 1,
     '#value' => $step == $profilewizard_steps?t('Finish'):t('Save & Continue'),
     '#weight' => 10,
     '#submit' => array('profilewizard_step_form_submit')
-	);
-	$form['buttons']['skip'] = array(
+  );
+  $form['buttons']['skip'] = array(
     '#type' => 'submit',
-		'#access' => 1,
+    '#access' => 1,
     '#value' => t('Skip Wizard'),
     '#weight' => 11,
     '#submit' => array('profilewizard_step_form_submit')
-	);
+  );
 
   drupal_prepare_form($form_id, $form, $form_state);
   // save all file field prepare data because they conflict after form processing
   $prepare_fields = array();
-	// get all 'standard' groups
+  // get all 'standard' groups
   $type = $profilewizard_type;
-	$groups = fieldgroup_groups($type);
+  $groups = fieldgroup_groups($type);
 
   foreach($fields as $field) {
     // Update the cached form with the new element at the right place in the form.
-		if (module_exists('fieldgroup'))
-			$group_name = fieldgroup_get_group($node->type, $field);
-		// if in a normal fieldset
-		if (!empty($group_name)) {
-			$prepare_fields[$field] = $form[$group_name][$field];
-		}
-		// if a normal field (not multigroup)
-		elseif (strlen(strstr($field, 'group_')) == 0) {
-			$prepare_fields[$field] = $form[$field];
-		} else {
-			if (!empty($groups[$field]['parent']))
-				$form[$field] = $form[$groups[$field]['parent']][$field];
-		}
+    if (module_exists('fieldgroup'))
+      $group_name = fieldgroup_get_group($node->type, $field);
+    // if in a normal fieldset
+    if (!empty($group_name)) {
+      $prepare_fields[$field] = $form[$group_name][$field];
+    }
+    // if a normal field (not multigroup)
+    elseif (strlen(strstr($field, 'group_')) == 0) {
+      $prepare_fields[$field] = $form[$field];
+    } else {
+      if (!empty($groups[$field]['parent']))
+        $form[$field] = $form[$groups[$field]['parent']][$field];
+    }
   }
 
   drupal_process_form($form_id, $form, $form_state);
 
   // restore all filefield prepare data because of conflict
-	foreach($fields as $field) {
-		// Update the cached form with the new element at the right place in the form.
-		if (!empty($prepare_fields[$field])) {
-			$form[$field] = $prepare_fields[$field];
-		}
+  foreach($fields as $field) {
+    // Update the cached form with the new element at the right place in the form.
+    if (!empty($prepare_fields[$field])) {
+      $form[$field] = $prepare_fields[$field];
+    }
   }
 
-	$field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id', '#multigroups');
+  $field_keys = array('#id', 'nid', 'vid', 'uid', 'created', 'type', 'language', 'changed', 'buttons', '#node', '#validate', '#theme', '#parameters', '#type', '#programmed', '#token', 'form_token', 'form_id', '#method', '#action', '#description', '#attributes', '#required', '#tree', '#parents', '#cache', '#pre_render', '#content_extra_fields', '#processed', '#defaults_loaded', '#field_info', '#build_id', 'form_build_id', '#multigroups');
   // hide unwanted fields
-	foreach($form as $key => $field) {
-		if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
+  foreach($form as $key => $field) {
+    if (!in_array($key, $field_keys) && !in_array($key, $fields)) {
 
-			// preserve fieldset hierarchy by hiding fieldsets
-			if ($field['#type'] == 'fieldset') {
-				$form[$key]['#access'] = false;
-			} else {
-				if (!empty($form[$key]['#type']))
-					$form[$key]['#type'] = 'hidden';
-				else
-					unset($form[$key]);
-			}
-		}
-	}
+      // preserve fieldset hierarchy by hiding fieldsets
+      if (isset($field['#type']))
+      if ($field['#type'] == 'fieldset') {
+        $form[$key]['#access'] = false;
+      } else {
+        if (!empty($form[$key]['#type']))
+          $form[$key]['#type'] = 'hidden';
+        else
+          unset($form[$key]);
+      }
+    }
+  }
 
-	// hide defaults
+  // hide defaults
   $form['author']['#access'] = false;
   $form['options']['#access'] = false;
   $form['comment_settings']['#access'] = false;
@@ -283,6 +288,7 @@ function profilewizard_step_form($context, $node, $step) {
   $form['print']['#access'] = false;
   $form['path']['#access'] = false;
   $form['path']['#access'] = false;
+  $form['notifications']['#access'] = false;
   $form['notifications']['#access'] = false;
 
 	$form['markup-start'] = array('#value' => '<div id="profilewizard-form">', '#weight' => -10);
