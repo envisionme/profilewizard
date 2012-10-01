@@ -1,6 +1,7 @@
 #block-profilewizard-0 .item-list ul {
 	border-bottom: 1px solid #EEEEEE;
 	overflow: auto;
+	width: 100%;
 }
 
 #block-profilewizard-0 .item-list ul li {
@@ -46,4 +47,8 @@
 #profilewizard-form .form-item .filefield-upload .form-submit.ahah-processed,
 #profilewizard-form .form-item .widget-edit .form-submit.ahah-processed {
 	display: none;
+}
+
+#profilewizard-form .content-add-more {
+  display: none;
 }
