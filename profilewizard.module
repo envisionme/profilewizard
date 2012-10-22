@@ -306,6 +306,43 @@ function profilewizard_step_form($context, $node, $step) {
  * Implementation of step form submit
  */
 function profilewizard_step_form_submit($form, &$form_state) {
+
+
+  // Match seeking position with current position.
+  $terms_entered = explode(',', $form_state['values']['field_app_seeking_position']['0']['term_ids']);
+  $terms_left = array();
+  foreach ($terms_entered as $term) {
+    if ($term == "") { }
+    elseif (strpos($term, '@@@') == 1) {
+      $seek_term_name = substr($term, 4);
+      $matching_tid = 0;
+      $matching_terms = taxonomy_get_term_by_name($seek_term_name);
+
+      foreach ( $matching_terms as $matching_term ) {
+        if ( $matching_term->vid == 7 )
+          $matching_tid = $matching_term->tid;
+      }
+
+      if ($matching_tid == 0) {
+        $newterm = array('vid' => 7, 'name' => $seek_term_name);
+        taxonomy_save_term($newterm);
+        $matching_terms = taxonomy_get_term_by_name($seek_term_name);
+
+        foreach ( $matching_terms as $matching_term ) {
+          if ( $matching_term->vid == 7 )
+            $matching_tid = $matching_term->tid;
+        }
+      }
+      $terms_left[] = $matching_tid;
+    }
+    else
+      $terms_left[] = $term;
+  }
+
+  $form_state['values']['field_app_seeking_position']['0']['term_ids'] = implode(',', $terms_left);
+
+
+
   $profilewizard_type = $form_state['values']['type'];
   $profilewizard_step_data = variable_get('profilewizard_step_data', array());
   $profilewizard_steps = count($profilewizard_step_data[$profilewizard_type]);
